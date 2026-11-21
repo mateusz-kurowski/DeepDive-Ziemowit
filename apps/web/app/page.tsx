@@ -45,6 +45,23 @@ type SoilTextureResult = {
   source: { name: string; resolutionM: number; url: string };
 };
 
+type TerrainFlowResult = {
+  status: "available" | "partial";
+  sampleSpacingM: number;
+  bufferM: number;
+  elevationDatum: string;
+  validSampleCount: number;
+  source: { name: string; url: string; nativeResolutionM: number };
+  slope: { meanDeg: number | null; medianDeg: number | null; p90Deg: number | null; maxDeg: number | null };
+  flow: {
+    outflowExits: Array<{ direction: string; estimatedContributingAreaM2: number }>;
+    inflowExits: Array<{ direction: string; estimatedContributingAreaM2: number }>;
+    concentrationZones: Array<{ lat: number; lng: number; estimatedContributingAreaM2: number }>;
+    depressions: Array<{ lat: number; lng: number; areaM2: number; maxFillDepthM: number }>;
+  };
+  limitations: string[];
+};
+
 type SatelliteResult = {
   status: "available" | "partial" | "unavailable";
   provider: "Earth Search";
@@ -94,6 +111,9 @@ export default function Home() {
   const [soilTexture, setSoilTexture] = useState<SoilTextureResult | null>(null);
   const [soilLoading, setSoilLoading] = useState(false);
   const [soilError, setSoilError] = useState("");
+  const [terrainFlow, setTerrainFlow] = useState<TerrainFlowResult | null>(null);
+  const [terrainFlowLoading, setTerrainFlowLoading] = useState(false);
+  const [terrainFlowError, setTerrainFlowError] = useState("");
   const [satellite, setSatellite] = useState<SatelliteResult | null>(null);
   const [satelliteLoading, setSatelliteLoading] = useState(false);
   const [satelliteError, setSatelliteError] = useState("");
@@ -104,6 +124,7 @@ export default function Home() {
   const requestRef = useRef<AbortController | null>(null);
   const weatherRequestRef = useRef<AbortController | null>(null);
   const soilRequestRef = useRef<AbortController | null>(null);
+  const terrainFlowRequestRef = useRef<AbortController | null>(null);
   const satelliteRequestRef = useRef<AbortController | null>(null);
   const droughtRequestRef = useRef<AbortController | null>(null);
 
@@ -111,6 +132,7 @@ export default function Home() {
     requestRef.current?.abort();
     weatherRequestRef.current?.abort();
     soilRequestRef.current?.abort();
+    terrainFlowRequestRef.current?.abort();
     satelliteRequestRef.current?.abort();
     droughtRequestRef.current?.abort();
   }, []);
@@ -258,12 +280,43 @@ export default function Home() {
     }
   }
 
+  async function fetchTerrainFlow(selected: ParcelResult) {
+    terrainFlowRequestRef.current?.abort();
+    const controller = new AbortController();
+    terrainFlowRequestRef.current = controller;
+    setTerrainFlowLoading(true);
+    setTerrainFlowError("");
+    setTerrainFlow(null);
+    try {
+      const response = await fetch("/api/terrain-flow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: selected.id, lat: selected.lat, lng: selected.lng, geometry: selected.geometry }),
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Nie udało się obliczyć kierunku spływu.");
+      setTerrainFlow(result as TerrainFlowResult);
+    } catch (reason) {
+      if (!(reason instanceof Error && reason.name === "AbortError")) {
+        setTerrainFlowError(reason instanceof Error ? reason.message : "Nie udało się obliczyć kierunku spływu.");
+      }
+    } finally {
+      if (terrainFlowRequestRef.current === controller) {
+        terrainFlowRequestRef.current = null;
+        setTerrainFlowLoading(false);
+      }
+    }
+  }
+
   function selectParcel(selected: ParcelResult) {
     setParcel(selected);
     setCandidates([]);
     if (selected.lat != null && selected.lng != null) {
       void fetchWeather(selected.lat, selected.lng, selected.geometry);
       void fetchSoilTexture(selected.lat, selected.lng);
+      void fetchTerrainFlow(selected);
       void fetchSatellite(selected, crop);
       void fetchDrought(selected.lat, selected.lng, crop, null, selected.geometry);
     } else {
@@ -273,9 +326,13 @@ export default function Home() {
       setWeather(null);
       setWeatherError("");
       soilRequestRef.current?.abort();
+      terrainFlowRequestRef.current?.abort();
       setSoilTexture(null);
       setSoilError("Dla tej działki nie udało się wyznaczyć punktu do odczytu gleby.");
       setSoilLoading(false);
+      setTerrainFlow(null);
+      setTerrainFlowError("Dla tej działki brakuje geometrii do analizy spływu.");
+      setTerrainFlowLoading(false);
       setSatellite(null);
       setSatelliteError("");
     }
@@ -287,6 +344,8 @@ export default function Home() {
     weatherRequestRef.current = null;
     soilRequestRef.current?.abort();
     soilRequestRef.current = null;
+    terrainFlowRequestRef.current?.abort();
+    terrainFlowRequestRef.current = null;
     satelliteRequestRef.current?.abort();
     satelliteRequestRef.current = null;
     droughtRequestRef.current?.abort();
@@ -304,6 +363,9 @@ export default function Home() {
     setSoilTexture(null);
     setSoilError("");
     setSoilLoading(false);
+    setTerrainFlow(null);
+    setTerrainFlowError("");
+    setTerrainFlowLoading(false);
     setSatellite(null);
     setSatelliteError("");
     setSatelliteLoading(false);
@@ -345,6 +407,8 @@ export default function Home() {
     weatherRequestRef.current = null;
     soilRequestRef.current?.abort();
     soilRequestRef.current = null;
+    terrainFlowRequestRef.current?.abort();
+    terrainFlowRequestRef.current = null;
     satelliteRequestRef.current?.abort();
     satelliteRequestRef.current = null;
     droughtRequestRef.current?.abort();
@@ -362,6 +426,9 @@ export default function Home() {
     setSoilTexture(null);
     setSoilError("");
     setSoilLoading(false);
+    setTerrainFlow(null);
+    setTerrainFlowError("");
+    setTerrainFlowLoading(false);
     setSatellite(null);
     setSatelliteError("");
     setSatelliteLoading(false);
@@ -477,6 +544,57 @@ export default function Home() {
               <p className="terrain-note">
                 Źródło: <a href={soilTexture?.source.url ?? "https://docs.isric.org/globaldata/soilgrids/"} target="_blank" rel="noreferrer">ISRIC SoilGrids</a>, predykcja modelu o rozdzielczości 250 m; wartości pobrane dla punktu reprezentatywnego działki, nie uśrednione po jej granicach. Frakcje podano oddzielnie, bez normalizowania sumy.
               </p>
+              <section className="terrain-flow-section" aria-label="Ukształtowanie terenu i potencjalny spływ wody">
+                <div className="terrain-flow-heading">
+                  <div>
+                    <span className="terrain-kicker">NMT GUGiK · SPŁYW POWIERZCHNIOWY</span>
+                    <h3>Ukształtowanie i spływ wody</h3>
+                  </div>
+                  {terrainFlow && <span className="terrain-source">siatka co {terrainFlow.sampleSpacingM} m</span>}
+                </div>
+                {terrainFlowLoading ? (
+                  <div className="weather-status"><span className="spinner" /> Analizuję wysokości i drogi spływu…</div>
+                ) : terrainFlowError ? (
+                  <div className="weather-error" role="alert">{terrainFlowError}</div>
+                ) : terrainFlow ? (
+                  <>
+                    <div className="terrain-flow-summary">
+                      <div><small>Średnie nachylenie</small><strong>{terrainFlow.slope.meanDeg === null ? "—" : `${terrainFlow.slope.meanDeg}°`}</strong></div>
+                      <div><small>Nachylenie — 90. percentyl</small><strong>{terrainFlow.slope.p90Deg === null ? "—" : `${terrainFlow.slope.p90Deg}°`}</strong></div>
+                      <div><small>Próbkowane komórki</small><strong>{terrainFlow.validSampleCount}</strong></div>
+                    </div>
+                    {terrainFlow.status === "partial" && <p className="soil-unavailable">Część punktów poza zasięgiem usługi NMT nie weszła do analizy.</p>}
+                    <div className="terrain-flow-groups">
+                      <div>
+                        <strong>Potencjalny dopływ z otoczenia</strong>
+                        {terrainFlow.flow.inflowExits.length ? (
+                          <ul>{terrainFlow.flow.inflowExits.map((exit) => <li key={exit.direction}><span>Kierunek {exit.direction}</span><span>zasilany obszar ≈ {exit.estimatedContributingAreaM2.toLocaleString("pl-PL")} m²</span></li>)}</ul>
+                        ) : <p>Model nie wykrył drogi dopływu przecinającej granicę działki.</p>}
+                      </div>
+                      <div>
+                        <strong>Potencjalny odpływ poza działkę</strong>
+                        {terrainFlow.flow.outflowExits.length ? (
+                          <ul>{terrainFlow.flow.outflowExits.map((exit) => <li key={exit.direction}><span>Kierunek {exit.direction}</span><span>zasilany obszar ≈ {exit.estimatedContributingAreaM2.toLocaleString("pl-PL")} m²</span></li>)}</ul>
+                        ) : <p>Model nie wykrył drogi spływu przecinającej granicę działki.</p>}
+                      </div>
+                      <div>
+                        <strong>Możliwe miejsca gromadzenia</strong>
+                        {terrainFlow.flow.depressions.length ? (
+                          <ul>{terrainFlow.flow.depressions.map((depression, index) => <li key={`${depression.lat}-${depression.lng}`}><span>Obniżenie {index + 1}</span><span>{depression.areaM2.toLocaleString("pl-PL")} m² · głębokość do {depression.maxFillDepthM.toFixed(2)} m</span></li>)}</ul>
+                        ) : <p>Nie wykryto zamkniętych obniżeń przekraczających próg analizy.</p>}
+                      </div>
+                    </div>
+                    {terrainFlow.flow.concentrationZones.length > 0 && (
+                      <p className="terrain-flow-note">Możliwe korytarze koncentracji spływu: {terrainFlow.flow.concentrationZones.map((zone) => `około ${zone.estimatedContributingAreaM2.toLocaleString("pl-PL")} m² zasilania`).join("; ")}.</p>
+                    )}
+                    <details className="terrain-flow-limitations">
+                      <summary>Jak interpretować wynik</summary>
+                      <p>To model potencjalnego spływu z NMT, a nie prognoza ilości wody. Siatka jest próbkowana co {terrainFlow.sampleSpacingM} m, a otoczenie analizowane w buforze {terrainFlow.bufferM} m. Wynik nie uwzględnia rowów, przepustów, upraw ani infiltracji gleby.</p>
+                    </details>
+                    <p className="terrain-note">Źródło: <a href={terrainFlow.source.url} target="_blank" rel="noreferrer">{terrainFlow.source.name}</a>; źródłowy NMT {terrainFlow.source.nativeResolutionM} m, układ wysokości {terrainFlow.elevationDatum}. Zasilany obszar poza buforem może być niepełny.</p>
+                  </>
+                ) : null}
+              </section>
             </section>
           )}
           {(droughtLoading || drought || droughtError) && (
