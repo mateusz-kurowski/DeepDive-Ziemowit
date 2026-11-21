@@ -186,6 +186,26 @@ h1 { margin-bottom: 5px; font: 800 1.8125rem/1.2 "Manrope", Arial, sans-serif; l
 .weather-history strong { color: var(--accent-text); }
 .weather-status { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: .75rem; }
 .weather-error { color: var(--danger); font-size: .6875rem; line-height: 1.45; }
+.terrain-card { margin: 0 16px 16px; padding: 16px 18px; border: var(--border-width) solid var(--line); border-radius: 14px; background: var(--surface); }
+.terrain-card-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 7px; }
+.terrain-card-heading h2 { margin: 3px 0 0; font: 700 .875rem "Manrope", Arial, sans-serif; }
+.terrain-kicker { color: var(--muted); font-size: .5625rem; font-weight: 800; letter-spacing: .09em; }
+.terrain-description { margin: 0 0 12px; color: var(--muted); font-size: .625rem; }
+.terrain-source { padding: 5px 8px; border: var(--border-width) solid var(--line); border-radius: 999px; background: var(--surface-2); color: var(--accent-text); font-size: .5625rem; font-weight: 700; }
+.terrain-note { margin: 12px 0 0; color: var(--faint); font-size: .625rem; line-height: 1.5; }
+.terrain-note a { color: var(--accent-text); text-underline-offset: 2px; }
+.soil-fractions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+.soil-fraction { min-width: 0; padding: 11px 12px; border: var(--border-width) solid var(--line); border-radius: 10px; background: var(--surface-2); }
+.soil-fraction-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 5px; }
+.soil-fraction-heading span { color: var(--ink-2); font-size: .625rem; font-weight: 600; }
+.soil-fraction-heading strong { color: var(--accent-text); font: 700 1rem "Manrope", Arial, sans-serif; white-space: nowrap; }
+.soil-fraction small { display: block; margin-top: 5px; color: var(--muted); font-size: .5625rem; }
+.soil-bar { height: 5px; margin-top: 8px; overflow: hidden; border-radius: 99px; background: var(--line); }
+.soil-bar-fill { display: block; height: 100%; border-radius: inherit; }
+.soil-sand { background: #d3a652; }
+.soil-silt { background: #739b70; }
+.soil-clay { background: #a56c56; }
+.soil-unavailable { padding: 10px 12px; border: var(--border-width) solid var(--warn); border-radius: 9px; background: var(--warn-bg); color: var(--ink-2); font-size: .6875rem; line-height: 1.45; }
 .drought-card { margin: 0 16px 16px; padding: 16px 18px; border: var(--border-width) solid var(--line); border-radius: 14px; background: var(--warn-bg); }
 .drought-card-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 13px; }
 .drought-card-heading h2 { margin: 3px 0 0; font: 700 .875rem "Manrope", Arial, sans-serif; }
@@ -451,6 +471,7 @@ html[data-contrast="high"] .station-status { border-color: currentColor; }
 @media (max-width: 900px) { .report-top, .report-grid-2 { grid-template-columns: 1fr; } .report-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 900px) { .app-shell { padding: 26px 22px; } .workspace { grid-template-columns: minmax(0, 1fr) 290px; } }
 @media (max-width: 700px) { .app-shell { padding: 64px 14px 22px; } .page-header { gap: 12px; margin-bottom: 22px; } .brand-mark { width: 46px; height: 46px; } h1 { font-size: 1.375rem; } .workspace { grid-template-columns: 1fr; } .map-frame, .map-loading { height: 52vh; min-height: 360px; } .details-panel { min-height: 270px; } .map-heading { gap: 10px; padding: 18px 16px 14px; } .map-heading h2 { font-size: .9375rem; } .map-heading p { font-size: .6875rem; } .map-hint { font-size: .625rem; } .report-toolbar { padding-right: 0; } }
+@media (max-width: 900px) { .soil-fractions { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { .advice-list, .finding-grid, .simple-advice { grid-template-columns: 1fr; } }
 @media (max-width: 560px) { .simple-tiles { grid-template-columns: 1fr; } .simple-more { flex-direction: column; align-items: stretch; } }
 @media print {

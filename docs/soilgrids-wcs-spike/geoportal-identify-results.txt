@@ -1,0 +1,740 @@
+﻿--- Krosniewice (52.251, 19.249) ---
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd"><html xmlns:esri_wms="http://www.esri.com/wms" xmlns="http://www.esri.com/wms">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8"></meta>
+<style type="text/css">
+					table, th, td {
+						border:1px solid #e5e5e5;
+						border-collapse:collapse;
+						font-family: arial;					
+						font-size: 80%;						
+						color: #333333
+					}   					
+					th, td {
+						valign: top;
+						text-align: center;
+					}					
+					th {
+						background-color: #aed7ff
+					}
+					body {
+						background-color: #ffffff;
+					}
+				</style>
+</head>
+<body>
+<h5>FeatureInfoCollection - layer name: 'KONTURY_GLEBOWE'</h5>
+<table width="100%" cellpadding="0" cellspacing="0" border="1">
+<tbody>
+<tr>
+<th>SYS_ID</th>
+<th>LOKALNYID</th>
+<th>PRZESTRZENNAZW</th>
+<th>WERSJAOBIEKTU</th>
+<th>POCZATEKWERSJIOBIEKTU</th>
+<th>KONIECWERSJIOBIEKTU</th>
+<th>DATAUTWORZENIA</th>
+<th>SKALA</th>
+<th>SKALAMACIERZYSTA</th>
+<th>TERENZALEWOWY</th>
+<th>UWAGI</th>
+<th>ZRODLO</th>
+<th>AKTUALNOSC</th>
+<th>AKTUALNOSC_NR</th>
+<th>KOMPLEKS</th>
+<th>KOMPLEKS_NR</th>
+<th>TYPPODTYP</th>
+<th>TYPPODTYP_NR</th>
+<th>PODLOZE1</th>
+<th>PODLOZE2</th>
+<th>PODLOZE3</th>
+<th>PODLOZE4</th>
+<th>PODLOZE5</th>
+<th>SZKIELETOWOSC1</th>
+<th>SZKIELETOWOSC2</th>
+<th>SZKIELETOWOSC3</th>
+<th>SZKIELETOWOSC4</th>
+<th>SZKIELETOWOSC5</th>
+<th>RODZAJGLEBYORGANICZNEJ1</th>
+<th>RODZAJGLEBYORGANICZNEJ2</th>
+<th>RODZAJGLEBYORGANICZNEJ3</th>
+<th>RODZAJGLEBYORGANICZNEJ4</th>
+<th>RODZAJGLEBYORGANICZNEJ5</th>
+<th>MIAZSZOSC1</th>
+<th>MIAZSZOSC2</th>
+<th>MIAZSZOSC3</th>
+<th>MIAZSZOSC4</th>
+<th>MIAZSZOSC5</th>
+<th>GATUNEKREDZINY1</th>
+<th>GATUNEKREDZINY2</th>
+<th>GATUNEKREDZINY3</th>
+<th>GATUNEKREDZINY4</th>
+<th>GATUNEKREDZINY5</th>
+<th>INFORMACJEDODATKOWE1</th>
+<th>INFORMACJEDODATKOWE2</th>
+<th>INFORMACJEDODATKOWE3</th>
+<th>INFORMACJEDODATKOWE4</th>
+<th>INFORMACJEDODATKOWE5</th>
+<th>GATUNEKMADY1</th>
+<th>GATUNEKMADY2</th>
+<th>GATUNEKMADY3</th>
+<th>GATUNEKMADY4</th>
+<th>GATUNEKMADY5</th>
+<th>Shape</th>
+<th>ESRI_OID</th>
+</tr>
+<tr>
+<td>1668798</td>
+<td>2c03594b-ccd4-48dc-b136-f76a18d47adb</td>
+<td>PL.PZGiK.9171.MGR</td>
+<td>25.11.2024</td>
+<td>25.11.2024</td>
+<td>Null</td>
+<td>25.11.2024</td>
+<td>Null</td>
+<td>Null</td>
+<td>false</td>
+<td>Null</td>
+<td>Mgr5000</td>
+<td>16.07.2015</td>
+<td>2015-07-16</td>
+<td>1</td>
+<td>1</td>
+<td>B</td>
+<td>B</td>
+<td>pgm</td>
+<td>Null</td>
+<td>glp</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>.</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Polygon</td>
+<td>179394</td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>
+
+
+--- Ryki (51.601, 21.999) ---
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd"><html xmlns:esri_wms="http://www.esri.com/wms" xmlns="http://www.esri.com/wms">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8"></meta>
+<style type="text/css">
+					table, th, td {
+						border:1px solid #e5e5e5;
+						border-collapse:collapse;
+						font-family: arial;					
+						font-size: 80%;						
+						color: #333333
+					}   					
+					th, td {
+						valign: top;
+						text-align: center;
+					}					
+					th {
+						background-color: #aed7ff
+					}
+					body {
+						background-color: #ffffff;
+					}
+				</style>
+</head>
+<body>
+<h5>FeatureInfoCollection - layer name: 'KONTURY_GLEBOWE'</h5>
+<table width="100%" cellpadding="0" cellspacing="0" border="1">
+<tbody>
+<tr>
+<th>SYS_ID</th>
+<th>LOKALNYID</th>
+<th>PRZESTRZENNAZW</th>
+<th>WERSJAOBIEKTU</th>
+<th>POCZATEKWERSJIOBIEKTU</th>
+<th>KONIECWERSJIOBIEKTU</th>
+<th>DATAUTWORZENIA</th>
+<th>SKALA</th>
+<th>SKALAMACIERZYSTA</th>
+<th>TERENZALEWOWY</th>
+<th>UWAGI</th>
+<th>ZRODLO</th>
+<th>AKTUALNOSC</th>
+<th>AKTUALNOSC_NR</th>
+<th>KOMPLEKS</th>
+<th>KOMPLEKS_NR</th>
+<th>TYPPODTYP</th>
+<th>TYPPODTYP_NR</th>
+<th>PODLOZE1</th>
+<th>PODLOZE2</th>
+<th>PODLOZE3</th>
+<th>PODLOZE4</th>
+<th>PODLOZE5</th>
+<th>SZKIELETOWOSC1</th>
+<th>SZKIELETOWOSC2</th>
+<th>SZKIELETOWOSC3</th>
+<th>SZKIELETOWOSC4</th>
+<th>SZKIELETOWOSC5</th>
+<th>RODZAJGLEBYORGANICZNEJ1</th>
+<th>RODZAJGLEBYORGANICZNEJ2</th>
+<th>RODZAJGLEBYORGANICZNEJ3</th>
+<th>RODZAJGLEBYORGANICZNEJ4</th>
+<th>RODZAJGLEBYORGANICZNEJ5</th>
+<th>MIAZSZOSC1</th>
+<th>MIAZSZOSC2</th>
+<th>MIAZSZOSC3</th>
+<th>MIAZSZOSC4</th>
+<th>MIAZSZOSC5</th>
+<th>GATUNEKREDZINY1</th>
+<th>GATUNEKREDZINY2</th>
+<th>GATUNEKREDZINY3</th>
+<th>GATUNEKREDZINY4</th>
+<th>GATUNEKREDZINY5</th>
+<th>INFORMACJEDODATKOWE1</th>
+<th>INFORMACJEDODATKOWE2</th>
+<th>INFORMACJEDODATKOWE3</th>
+<th>INFORMACJEDODATKOWE4</th>
+<th>INFORMACJEDODATKOWE5</th>
+<th>GATUNEKMADY1</th>
+<th>GATUNEKMADY2</th>
+<th>GATUNEKMADY3</th>
+<th>GATUNEKMADY4</th>
+<th>GATUNEKMADY5</th>
+<th>Shape</th>
+<th>ESRI_OID</th>
+</tr>
+<tr>
+<td>825850</td>
+<td>f6016e5b-b6ae-4766-aed0-9541b5ec6605</td>
+<td>PL.PZGiK.9171.MGR</td>
+<td>28.05.2024</td>
+<td>28.05.2024</td>
+<td>Null</td>
+<td>28.05.2024</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>dane powstaÅe w wyniku wektoryzacji map rastrowych z lat 1963-1971 (przedziaÅ czasowy dotyczy wojewÃ³dztwa lubelskiego)</td>
+<td>Mgr5000</td>
+<td>Null</td>
+<td>missing</td>
+<td>3z</td>
+<td>3z</td>
+<td>Bw</td>
+<td>Bw</td>
+<td>pl</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Polygon</td>
+<td>245167</td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>
+
+
+--- Warszawa (52.2297, 21.0122) ---
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd"><html xmlns:esri_wms="http://www.esri.com/wms" xmlns="http://www.esri.com/wms">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8"></meta>
+<style type="text/css">
+					table, th, td {
+						border:1px solid #e5e5e5;
+						border-collapse:collapse;
+						font-family: arial;					
+						font-size: 80%;						
+						color: #333333
+					}   					
+					th, td {
+						valign: top;
+						text-align: center;
+					}					
+					th {
+						background-color: #aed7ff
+					}
+					body {
+						background-color: #ffffff;
+					}
+				</style>
+</head>
+<body>
+<h5>FeatureInfoCollection - layer name: 'KONTURY_GLEBOWE'</h5>
+<table width="100%" cellpadding="0" cellspacing="0" border="1">
+<tbody>
+<tr>
+<th>SYS_ID</th>
+<th>LOKALNYID</th>
+<th>PRZESTRZENNAZW</th>
+<th>WERSJAOBIEKTU</th>
+<th>POCZATEKWERSJIOBIEKTU</th>
+<th>KONIECWERSJIOBIEKTU</th>
+<th>DATAUTWORZENIA</th>
+<th>SKALA</th>
+<th>SKALAMACIERZYSTA</th>
+<th>TERENZALEWOWY</th>
+<th>UWAGI</th>
+<th>ZRODLO</th>
+<th>AKTUALNOSC</th>
+<th>AKTUALNOSC_NR</th>
+<th>KOMPLEKS</th>
+<th>KOMPLEKS_NR</th>
+<th>TYPPODTYP</th>
+<th>TYPPODTYP_NR</th>
+<th>PODLOZE1</th>
+<th>PODLOZE2</th>
+<th>PODLOZE3</th>
+<th>PODLOZE4</th>
+<th>PODLOZE5</th>
+<th>SZKIELETOWOSC1</th>
+<th>SZKIELETOWOSC2</th>
+<th>SZKIELETOWOSC3</th>
+<th>SZKIELETOWOSC4</th>
+<th>SZKIELETOWOSC5</th>
+<th>RODZAJGLEBYORGANICZNEJ1</th>
+<th>RODZAJGLEBYORGANICZNEJ2</th>
+<th>RODZAJGLEBYORGANICZNEJ3</th>
+<th>RODZAJGLEBYORGANICZNEJ4</th>
+<th>RODZAJGLEBYORGANICZNEJ5</th>
+<th>MIAZSZOSC1</th>
+<th>MIAZSZOSC2</th>
+<th>MIAZSZOSC3</th>
+<th>MIAZSZOSC4</th>
+<th>MIAZSZOSC5</th>
+<th>GATUNEKREDZINY1</th>
+<th>GATUNEKREDZINY2</th>
+<th>GATUNEKREDZINY3</th>
+<th>GATUNEKREDZINY4</th>
+<th>GATUNEKREDZINY5</th>
+<th>INFORMACJEDODATKOWE1</th>
+<th>INFORMACJEDODATKOWE2</th>
+<th>INFORMACJEDODATKOWE3</th>
+<th>INFORMACJEDODATKOWE4</th>
+<th>INFORMACJEDODATKOWE5</th>
+<th>GATUNEKMADY1</th>
+<th>GATUNEKMADY2</th>
+<th>GATUNEKMADY3</th>
+<th>GATUNEKMADY4</th>
+<th>GATUNEKMADY5</th>
+<th>Shape</th>
+<th>ESRI_OID</th>
+</tr>
+<tr>
+<td>1902604</td>
+<td>080026a6-8595-4a85-82f4-c739a12b2af1</td>
+<td>PL.PZGiK.9171.MGR</td>
+<td>22.11.2025 22:03:58</td>
+<td>22.11.2025 22:03:58</td>
+<td>Null</td>
+<td>22.11.2025</td>
+<td>Null</td>
+<td>Null</td>
+<td>false</td>
+<td>brakÂ rastra</td>
+<td>Mgr5000</td>
+<td>Null</td>
+<td>missing</td>
+<td>Tnk</td>
+<td>Tnk</td>
+<td>Null</td>
+<td>missing</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Polygon</td>
+<td>12614</td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>
+
+
+--- Choroszcz (53.1, 22.85) ---
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd"><html xmlns:esri_wms="http://www.esri.com/wms" xmlns="http://www.esri.com/wms">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8"></meta>
+<style type="text/css">
+					table, th, td {
+						border:1px solid #e5e5e5;
+						border-collapse:collapse;
+						font-family: arial;					
+						font-size: 80%;						
+						color: #333333
+					}   					
+					th, td {
+						valign: top;
+						text-align: center;
+					}					
+					th {
+						background-color: #aed7ff
+					}
+					body {
+						background-color: #ffffff;
+					}
+				</style>
+</head>
+<body>
+<h5>FeatureInfoCollection - layer name: 'KONTURY_GLEBOWE'</h5>
+<table width="100%" cellpadding="0" cellspacing="0" border="1">
+<tbody>
+<tr>
+<th>SYS_ID</th>
+<th>LOKALNYID</th>
+<th>PRZESTRZENNAZW</th>
+<th>WERSJAOBIEKTU</th>
+<th>POCZATEKWERSJIOBIEKTU</th>
+<th>KONIECWERSJIOBIEKTU</th>
+<th>DATAUTWORZENIA</th>
+<th>SKALA</th>
+<th>SKALAMACIERZYSTA</th>
+<th>TERENZALEWOWY</th>
+<th>UWAGI</th>
+<th>ZRODLO</th>
+<th>AKTUALNOSC</th>
+<th>AKTUALNOSC_NR</th>
+<th>KOMPLEKS</th>
+<th>KOMPLEKS_NR</th>
+<th>TYPPODTYP</th>
+<th>TYPPODTYP_NR</th>
+<th>PODLOZE1</th>
+<th>PODLOZE2</th>
+<th>PODLOZE3</th>
+<th>PODLOZE4</th>
+<th>PODLOZE5</th>
+<th>SZKIELETOWOSC1</th>
+<th>SZKIELETOWOSC2</th>
+<th>SZKIELETOWOSC3</th>
+<th>SZKIELETOWOSC4</th>
+<th>SZKIELETOWOSC5</th>
+<th>RODZAJGLEBYORGANICZNEJ1</th>
+<th>RODZAJGLEBYORGANICZNEJ2</th>
+<th>RODZAJGLEBYORGANICZNEJ3</th>
+<th>RODZAJGLEBYORGANICZNEJ4</th>
+<th>RODZAJGLEBYORGANICZNEJ5</th>
+<th>MIAZSZOSC1</th>
+<th>MIAZSZOSC2</th>
+<th>MIAZSZOSC3</th>
+<th>MIAZSZOSC4</th>
+<th>MIAZSZOSC5</th>
+<th>GATUNEKREDZINY1</th>
+<th>GATUNEKREDZINY2</th>
+<th>GATUNEKREDZINY3</th>
+<th>GATUNEKREDZINY4</th>
+<th>GATUNEKREDZINY5</th>
+<th>INFORMACJEDODATKOWE1</th>
+<th>INFORMACJEDODATKOWE2</th>
+<th>INFORMACJEDODATKOWE3</th>
+<th>INFORMACJEDODATKOWE4</th>
+<th>INFORMACJEDODATKOWE5</th>
+<th>GATUNEKMADY1</th>
+<th>GATUNEKMADY2</th>
+<th>GATUNEKMADY3</th>
+<th>GATUNEKMADY4</th>
+<th>GATUNEKMADY5</th>
+<th>Shape</th>
+<th>ESRI_OID</th>
+</tr>
+<tr>
+<td>3099421</td>
+<td>8a124c5f-f547-4b2d-8661-c713eca70e07</td>
+<td>PL.PZGiK.9171.MGR</td>
+<td>24.04.2024</td>
+<td>24.04.2024</td>
+<td>Null</td>
+<td>24.04.2024</td>
+<td>Null</td>
+<td>Null</td>
+<td>false</td>
+<td>Null</td>
+<td>Mgr5000</td>
+<td>01.07.1967</td>
+<td>1967-07-01</td>
+<td>5</td>
+<td>5</td>
+<td>A</td>
+<td>A</td>
+<td>pgl</td>
+<td>gs</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>-</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Polygon</td>
+<td>169297</td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>
+
+
+--- Opole (50.7, 17.9) ---
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd"><html xmlns:esri_wms="http://www.esri.com/wms" xmlns="http://www.esri.com/wms">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8"></meta>
+<style type="text/css">
+					table, th, td {
+						border:1px solid #e5e5e5;
+						border-collapse:collapse;
+						font-family: arial;					
+						font-size: 80%;						
+						color: #333333
+					}   					
+					th, td {
+						valign: top;
+						text-align: center;
+					}					
+					th {
+						background-color: #aed7ff
+					}
+					body {
+						background-color: #ffffff;
+					}
+				</style>
+</head>
+<body>
+<h5>FeatureInfoCollection - layer name: 'KONTURY_GLEBOWE'</h5>
+<table width="100%" cellpadding="0" cellspacing="0" border="1">
+<tbody>
+<tr>
+<th>SYS_ID</th>
+<th>LOKALNYID</th>
+<th>PRZESTRZENNAZW</th>
+<th>WERSJAOBIEKTU</th>
+<th>POCZATEKWERSJIOBIEKTU</th>
+<th>KONIECWERSJIOBIEKTU</th>
+<th>DATAUTWORZENIA</th>
+<th>SKALA</th>
+<th>SKALAMACIERZYSTA</th>
+<th>TERENZALEWOWY</th>
+<th>UWAGI</th>
+<th>ZRODLO</th>
+<th>AKTUALNOSC</th>
+<th>AKTUALNOSC_NR</th>
+<th>KOMPLEKS</th>
+<th>KOMPLEKS_NR</th>
+<th>TYPPODTYP</th>
+<th>TYPPODTYP_NR</th>
+<th>PODLOZE1</th>
+<th>PODLOZE2</th>
+<th>PODLOZE3</th>
+<th>PODLOZE4</th>
+<th>PODLOZE5</th>
+<th>SZKIELETOWOSC1</th>
+<th>SZKIELETOWOSC2</th>
+<th>SZKIELETOWOSC3</th>
+<th>SZKIELETOWOSC4</th>
+<th>SZKIELETOWOSC5</th>
+<th>RODZAJGLEBYORGANICZNEJ1</th>
+<th>RODZAJGLEBYORGANICZNEJ2</th>
+<th>RODZAJGLEBYORGANICZNEJ3</th>
+<th>RODZAJGLEBYORGANICZNEJ4</th>
+<th>RODZAJGLEBYORGANICZNEJ5</th>
+<th>MIAZSZOSC1</th>
+<th>MIAZSZOSC2</th>
+<th>MIAZSZOSC3</th>
+<th>MIAZSZOSC4</th>
+<th>MIAZSZOSC5</th>
+<th>GATUNEKREDZINY1</th>
+<th>GATUNEKREDZINY2</th>
+<th>GATUNEKREDZINY3</th>
+<th>GATUNEKREDZINY4</th>
+<th>GATUNEKREDZINY5</th>
+<th>INFORMACJEDODATKOWE1</th>
+<th>INFORMACJEDODATKOWE2</th>
+<th>INFORMACJEDODATKOWE3</th>
+<th>INFORMACJEDODATKOWE4</th>
+<th>INFORMACJEDODATKOWE5</th>
+<th>GATUNEKMADY1</th>
+<th>GATUNEKMADY2</th>
+<th>GATUNEKMADY3</th>
+<th>GATUNEKMADY4</th>
+<th>GATUNEKMADY5</th>
+<th>Shape</th>
+<th>ESRI_OID</th>
+</tr>
+<tr>
+<td>2477705</td>
+<td>f0dfb2f8-8a0f-4f79-ab98-7be46691652d</td>
+<td>PL.PZGiK.9171.MGR</td>
+<td>19.11.2023 23:00:00</td>
+<td>19.11.2023 23:00:00</td>
+<td>Null</td>
+<td>19.11.2023</td>
+<td>Null</td>
+<td>Null</td>
+<td>false</td>
+<td>Null</td>
+<td>Mgr5000</td>
+<td>01.01.1977</td>
+<td>1977-01-01</td>
+<td>2z</td>
+<td>2z</td>
+<td>F</td>
+<td>F</td>
+<td>gsp</td>
+<td>Null</td>
+<td>Null</td>
+<td>ps</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>:</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Null</td>
+<td>Polygon</td>
+<td>245168</td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>
+
+
