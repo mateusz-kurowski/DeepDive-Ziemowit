@@ -336,8 +336,12 @@ export default function Home() {
                     <div className="satellite-metrics">
                       <div><span className="satellite-value">{satellite.ndvi?.toFixed(2) ?? "—"}</span><small>NDVI teraz</small></div>
                       <div><span className="satellite-value">{satellite.historicalNdvi?.toFixed(2) ?? "—"}</span><small>NDVI rok temu</small></div>
-                      <div><span className="satellite-value">{satellite.validPixelPercent?.toFixed(0) ?? "—"}%</span><small>użyteczne piksele działki</small></div>
                     </div>
+                    <p className="ndvi-explanation">
+                      <strong>Co oznacza NDVI?</strong> Wskaźnik od 0 do 1 opisuje intensywność zielonego pokrycia roślin:
+                      poniżej 0,3 — słabe lub rozproszone, 0,3–0,6 — umiarkowane,
+                      powyżej 0,6 — silne. Najniższe i ujemne wartości wskazują głównie glebę, wodę lub zabudowę.
+                    </p>
                     <p className="satellite-meta">
                       Obserwacja: <strong>{satellite.date ?? "brak"}</strong>
                       {" · "}chmury: <strong>{satellite.cloudCoverPercent?.toFixed(1) ?? "—"}%</strong>
