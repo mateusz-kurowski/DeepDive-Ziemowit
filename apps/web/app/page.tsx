@@ -95,6 +95,7 @@ export default function Home() {
     lng: number,
     selectedCrop: string,
     precipitation30DaysMm: number | null = null,
+    geometry: ParcelResult["geometry"] = null,
   ) {
     droughtRequestRef.current?.abort();
     const controller = new AbortController();
@@ -106,7 +107,7 @@ export default function Home() {
       const response = await fetch("/api/drought", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lat, lng, crop: selectedCrop, precipitation30DaysMm }),
+        body: JSON.stringify({ lat, lng, crop: selectedCrop, geometry, precipitation30DaysMm }),
         cache: "no-store",
         signal: controller.signal,
       });
@@ -162,7 +163,11 @@ export default function Home() {
     }
   }
 
-  async function fetchWeather(lat: number, lng: number) {
+  async function fetchWeather(
+    lat: number,
+    lng: number,
+    geometry: ParcelResult["geometry"] = null,
+  ) {
     weatherRequestRef.current?.abort();
     const controller = new AbortController();
     weatherRequestRef.current = controller;
@@ -185,7 +190,7 @@ export default function Home() {
       if (!response.ok) throw new Error(result.error ?? "Nie udało się pobrać danych pogodowych.");
       setWeather(result as WeatherResult);
       const weatherResult = result as WeatherResult;
-      void fetchDrought(lat, lng, crop, weatherResult.indicators.precipitationSumMm);
+      void fetchDrought(lat, lng, crop, weatherResult.indicators.precipitationSumMm, geometry);
     } catch (reason) {
       if (!(reason instanceof Error && reason.name === "AbortError")) {
         setWeatherError(reason instanceof Error ? reason.message : "Nie udało się pobrać danych pogodowych.");
@@ -202,9 +207,9 @@ export default function Home() {
     setParcel(selected);
     setCandidates([]);
     if (selected.lat != null && selected.lng != null) {
-      void fetchWeather(selected.lat, selected.lng);
+      void fetchWeather(selected.lat, selected.lng, selected.geometry);
       void fetchSatellite(selected, crop);
-      void fetchDrought(selected.lat, selected.lng, crop);
+      void fetchDrought(selected.lat, selected.lng, crop, null, selected.geometry);
     } else {
       weatherRequestRef.current?.abort();
       satelliteRequestRef.current?.abort();
@@ -333,11 +338,7 @@ export default function Home() {
             <div><h2>Wybierz działkę</h2><p>Przybliż mapę i kliknij wewnątrz jej granic.</p></div>
             <span className="map-hint">⌖ Kliknij punkt na mapie</span>
           </div>
-          <ParcelMap
-            onSelectPoint={selectPoint}
-            parcel={parcel}
-            showDroughtLayer={Boolean(parcel && drought?.category)}
-          />
+          <ParcelMap onSelectPoint={selectPoint} parcel={parcel} />
           <p className="attribution-note">Dane działek: GUGiK, ULDK. Podkład mapy: © OpenStreetMap.</p>
           {(weatherLoading || weather || weatherError) && (
             <section className="weather-card" aria-live="polite" aria-label="Najważniejsze dane pogodowe">
@@ -398,18 +399,9 @@ export default function Home() {
                       </div>
                     </div>
                     <p className="drought-interpretation">{drought.interpretation}</p>
-                    <p className="drought-map-explanation">
-                      <strong>Niebieska linia i punkt</strong> oznaczają wybraną działkę. Kolory nakładki IUNG oznaczają podatność gleby: żółty I, pomarańczowy II, czerwony III, brązowy IV.
-                    </p>
                     {drought.precipitationDeficitMm !== null && drought.precipitationDeficitMm > 0 && (
                       <p className="drought-deficit">Niedobór względem orientacyjnego progu: <strong>{drought.precipitationDeficitMm.toFixed(1)} mm</strong></p>
                     )}
-                    <div className="drought-legend" aria-label="Legenda mapy podatności gleby">
-                      <span><i className="drought-color drought-1" /> Kategoria I</span>
-                      <span><i className="drought-color drought-2" /> II</span>
-                      <span><i className="drought-color drought-3" /> III</span>
-                      <span><i className="drought-color drought-4" /> IV</span>
-                    </div>
                     <p className="drought-source">Warstwa IUNG 2024 · {drought.provider} · dane nie są bieżącym monitorowaniem suszy</p>
                   </>
                 )
@@ -507,6 +499,7 @@ export default function Home() {
                       parcel.lng,
                       nextCrop,
                       weather?.indicators.precipitationSumMm ?? null,
+                      parcel.geometry,
                     );
                   }
                 }

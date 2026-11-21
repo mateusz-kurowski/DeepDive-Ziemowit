@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import proj4 from "proj4";
+import sharp from "sharp";
 
 export const runtime = "nodejs";
 
@@ -7,6 +8,11 @@ type DroughtCategory = {
   code: number;
   name: string;
   susceptibility: "bardzo wysoka" | "wysoka" | "umiarkowana" | "niska" | "nieklasyfikowana";
+};
+
+type Geometry = {
+  type: "Polygon" | "MultiPolygon";
+  coordinates: number[][][] | number[][][][];
 };
 
 type DroughtResult = {
@@ -61,35 +67,111 @@ const cropRainfallMinimum: Record<string, number> = {
   inna: 30,
 };
 
-async function getSoilCategory(lat: number, lng: number): Promise<DroughtCategory | null> {
-  const [x, y] = proj4("EPSG:4326", "EPSG:2180", [lng, lat]) as number[];
-  const offset = 500;
-  const bbox = `${x - offset},${y - offset},${x + offset},${y + offset}`;
-  const url = new URL("https://sgeo.iung.pl/geoserver/Susza/wms");
-  url.searchParams.set("SERVICE", "WMS");
-  url.searchParams.set("VERSION", "1.3.0");
-  url.searchParams.set("REQUEST", "GetFeatureInfo");
-  url.searchParams.set("BBOX", bbox);
-  url.searchParams.set("CRS", "EPSG:2180");
-  url.searchParams.set("WIDTH", "101");
-  url.searchParams.set("HEIGHT", "101");
-  url.searchParams.set("LAYERS", "Susza:katgl_landuse2024");
-  url.searchParams.set("QUERY_LAYERS", "Susza:katgl_landuse2024");
-  url.searchParams.set("INFO_FORMAT", "application/json");
-  url.searchParams.set("I", "50");
-  url.searchParams.set("J", "50");
-  url.searchParams.set("FEATURE_COUNT", "1");
+function pointInRing(x: number, y: number, ring: number[][]): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0];
+    const yi = ring[i][1];
+    const xj = ring[j][0];
+    const yj = ring[j][1];
+    const intersects = ((yi > y) !== (yj > y)) && (x < ((xj - xi) * (y - yi)) / (yj - yi) + xi);
+    if (intersects) inside = !inside;
+  }
+  return inside;
+}
 
-  const response = await fetch(url, {
-    headers: { Accept: "application/json" },
-    cache: "no-store",
-  });
+function pointInGeometry(lng: number, lat: number, geometry: Geometry | null): boolean {
+  if (!geometry) return true;
+  if (geometry.type === "Polygon") {
+    return pointInRing(lng, lat, (geometry.coordinates as number[][][])[0]);
+  }
+  return (geometry.coordinates as number[][][][]).some((polygon) => pointInRing(lng, lat, polygon[0]));
+}
+
+async function getSoilCategory(
+  lat: number,
+  lng: number,
+  geometry: Geometry | null,
+): Promise<DroughtCategory | null> {
+  const [centerX, centerY] = proj4("EPSG:4326", "EPSG:2180", [lng, lat]) as number[];
+  const projectedRings: number[][][] = [];
+  if (geometry?.type === "Polygon") {
+    projectedRings.push((geometry.coordinates as number[][][])[0].map(([ringLng, ringLat]) =>
+      proj4("EPSG:4326", "EPSG:2180", [ringLng, ringLat]) as number[],
+    ));
+  } else if (geometry?.type === "MultiPolygon") {
+    (geometry.coordinates as number[][][][]).forEach((polygon) =>
+      projectedRings.push(polygon[0].map(([ringLng, ringLat]) =>
+        proj4("EPSG:4326", "EPSG:2180", [ringLng, ringLat]) as number[],
+      )),
+    );
+  }
+
+  let xs: number[] = [];
+  let ys: number[] = [];
+  if (projectedRings.length > 0) {
+    const allPoints = projectedRings.flat();
+    xs = allPoints.map((point) => point[0]);
+    ys = allPoints.map((point) => point[1]);
+  } else {
+    xs = [centerX - 250, centerX + 250];
+    ys = [centerY - 250, centerY + 250];
+  }
+
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const width = 300;
+  const height = 300;
+  const url = new URL("https://sgeo.iung.pl/geoserver/Susza/wms");
+  url.searchParams.set("service", "WMS");
+  url.searchParams.set("version", "1.1.1");
+  url.searchParams.set("request", "GetMap");
+  url.searchParams.set("layers", "Susza:katgl_landuse2024");
+  url.searchParams.set("styles", "");
+  url.searchParams.set("srs", "EPSG:2180");
+  url.searchParams.set("bbox", `${minX},${minY},${maxX},${maxY}`);
+  url.searchParams.set("width", String(width));
+  url.searchParams.set("height", String(height));
+  url.searchParams.set("format", "image/png");
+  url.searchParams.set("transparent", "true");
+
+  const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) throw new Error("Warstwa podatności gleb IUNG jest niedostępna.");
-  const payload = await response.json() as {
-    features?: Array<{ properties?: { GRAY_INDEX?: number } }>;
-  };
-  const code = payload.features?.[0]?.properties?.GRAY_INDEX;
-  return typeof code === "number" ? categoryMap[code] ?? null : null;
+  const image = await sharp(Buffer.from(await response.arrayBuffer()))
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const counts = new Map<number, number>();
+  const pixelWidth = (maxX - minX) / width;
+  const pixelHeight = (maxY - minY) / height;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const nativeX = minX + (x + 0.5) * pixelWidth;
+      const nativeY = maxY - (y + 0.5) * pixelHeight;
+      const [sampleLng, sampleLat] = proj4("EPSG:2180", "EPSG:4326", [nativeX, nativeY]) as number[];
+      if (!pointInGeometry(sampleLng, sampleLat, geometry)) continue;
+
+      const index = (y * width + x) * 4;
+      const red = image.data[index];
+      const green = image.data[index + 1];
+      const blue = image.data[index + 2];
+      const alpha = image.data[index + 3];
+      if (alpha < 128) continue;
+
+      let code: number | null = null;
+      if (red > 240 && green > 240 && blue < 110) code = 1;
+      else if (red > 230 && green > 120 && green < 190 && blue < 30) code = 2;
+      else if (red > 220 && green < 110 && blue < 80) code = 3;
+      else if (red >= 110 && red <= 140 && green >= 55 && green <= 75 && blue === 0) code = 4;
+      if (code) counts.set(code, (counts.get(code) ?? 0) + 1);
+    }
+  }
+
+  const dominantCode = [...counts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0];
+  return dominantCode ? categoryMap[dominantCode] : null;
 }
 
 function calculateRisk(
@@ -110,7 +192,13 @@ function calculateRisk(
 }
 
 export async function POST(request: Request) {
-  let body: { lat?: unknown; lng?: unknown; crop?: unknown; precipitation30DaysMm?: unknown };
+  let body: {
+    lat?: unknown;
+    lng?: unknown;
+    crop?: unknown;
+    geometry?: Geometry | null;
+    precipitation30DaysMm?: unknown;
+  };
   try {
     body = await request.json();
   } catch {
@@ -124,6 +212,7 @@ export async function POST(request: Request) {
   }
 
   const crop = typeof body.crop === "string" && body.crop.trim() ? body.crop.trim() : "inna";
+  const geometry = body.geometry && typeof body.geometry === "object" ? body.geometry : null;
   const precipitation = typeof body.precipitation30DaysMm === "number" && Number.isFinite(body.precipitation30DaysMm)
     ? body.precipitation30DaysMm
     : null;
@@ -133,7 +222,7 @@ export async function POST(request: Request) {
   if (cached && cached.expiresAt > Date.now()) return NextResponse.json(cached.value);
 
   try {
-    const category = await getSoilCategory(lat, lng);
+    const category = await getSoilCategory(lat, lng, geometry);
     const deficit = precipitation === null ? null : Number(Math.max(0, minimum - precipitation).toFixed(1));
     const currentRisk = calculateRisk(category, precipitation, minimum);
     const cropName = cropLabels[crop] ?? "wybraną uprawę";

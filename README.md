@@ -125,7 +125,10 @@ nie wyświetlany jest pozornie precyzyjny wynik.
 Dla każdej wybranej działki aplikacja pobiera warstwę IUNG-PIB
 `Susza:katgl_landuse2024` przez usługę WMS. Punkt działki jest
 przekształcany z EPSG:4326 do układu EPSG:2180, a usługa `GetFeatureInfo`
-zwraca kategorię gleby:
+zwraca mapę klasyfikacji. Aplikacja pobiera raster tej warstwy dla granic
+działki i analizuje piksele znajdujące się wewnątrz działki. Następnie
+wybiera kategorię dominującą, zamiast opierać wynik wyłącznie na jednym
+punkcie centroidu:
 
 - I — bardzo podatna na suszę,
 - II — podatna,
