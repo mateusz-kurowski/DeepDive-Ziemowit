@@ -7,15 +7,19 @@
     "start": "npm run build && next start"
   },
   "dependencies": {
+    "geotiff": "^3.0.5",
     "leaflet": "^1.9.4",
     "next": "16.4.6",
+    "proj4": "^2.23.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "react-leaflet": "^5.0.0"
+    "react-leaflet": "^5.0.0",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@types/leaflet": "^1.9.22",
     "@types/node": "22.15.30",
+    "@types/proj4": "^2.5.6",
     "@types/react": "19.1.6",
     "@types/react-dom": "19.1.6",
     "typescript": "5.8.3"

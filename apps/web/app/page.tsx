@@ -28,6 +28,25 @@ type WeatherResult = {
   };
 };
 
+type SatelliteResult = {
+  status: "available" | "partial" | "unavailable";
+  provider: "Earth Search";
+  satellite: "Sentinel-2";
+  level: "L2A";
+  currentImageUrl: string | null;
+  historicalImageUrl: string | null;
+  date: string | null;
+  cloudCoverPercent: number | null;
+  resolutionMeters: number | null;
+  ndvi: number | null;
+  historicalNdvi: number | null;
+  ndviDifference: number | null;
+  validPixelPercent: number | null;
+  crop: string;
+  interpretation: string;
+  limitations: string[];
+};
+
 export default function Home() {
   const [parcel, setParcel] = useState<ParcelResult | null>(null);
   const [error, setError] = useState("");
@@ -38,13 +57,56 @@ export default function Home() {
   const [weather, setWeather] = useState<WeatherResult | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState("");
+  const [satellite, setSatellite] = useState<SatelliteResult | null>(null);
+  const [satelliteLoading, setSatelliteLoading] = useState(false);
+  const [satelliteError, setSatelliteError] = useState("");
+  const [crop, setCrop] = useState("zboza");
   const requestRef = useRef<AbortController | null>(null);
   const weatherRequestRef = useRef<AbortController | null>(null);
+  const satelliteRequestRef = useRef<AbortController | null>(null);
 
   useEffect(() => () => {
     requestRef.current?.abort();
     weatherRequestRef.current?.abort();
+    satelliteRequestRef.current?.abort();
   }, []);
+
+  async function fetchSatellite(selected: ParcelResult, selectedCrop: string) {
+    if (selected.lat == null || selected.lng == null) return;
+    satelliteRequestRef.current?.abort();
+    const controller = new AbortController();
+    satelliteRequestRef.current = controller;
+    setSatelliteLoading(true);
+    setSatelliteError("");
+    setSatellite(null);
+    try {
+      const response = await fetch("/api/satellite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lat: selected.lat,
+          lng: selected.lng,
+          geometry: selected.geometry,
+          crop: selectedCrop,
+          weatherAvailable: weather != null,
+        }),
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Nie udało się pobrać danych satelitarnych.");
+      setSatellite(result as SatelliteResult);
+    } catch (reason) {
+      if (!(reason instanceof Error && reason.name === "AbortError")) {
+        setSatelliteError(reason instanceof Error ? reason.message : "Nie udało się pobrać danych satelitarnych.");
+      }
+    } finally {
+      if (satelliteRequestRef.current === controller) {
+        satelliteRequestRef.current = null;
+        setSatelliteLoading(false);
+      }
+    }
+  }
 
   async function fetchWeather(lat: number, lng: number) {
     weatherRequestRef.current?.abort();
@@ -85,10 +147,14 @@ export default function Home() {
     setCandidates([]);
     if (selected.lat != null && selected.lng != null) {
       void fetchWeather(selected.lat, selected.lng);
+      void fetchSatellite(selected, crop);
     } else {
       weatherRequestRef.current?.abort();
+      satelliteRequestRef.current?.abort();
       setWeather(null);
       setWeatherError("");
+      setSatellite(null);
+      setSatelliteError("");
     }
   }
 
@@ -96,6 +162,8 @@ export default function Home() {
     requestRef.current?.abort();
     weatherRequestRef.current?.abort();
     weatherRequestRef.current = null;
+    satelliteRequestRef.current?.abort();
+    satelliteRequestRef.current = null;
     const controller = new AbortController();
     requestRef.current = controller;
     setLoading(true);
@@ -106,6 +174,9 @@ export default function Home() {
     setWeather(null);
     setWeatherError("");
     setWeatherLoading(false);
+    setSatellite(null);
+    setSatelliteError("");
+    setSatelliteLoading(false);
     try {
       const response = await fetch("/api/parcels", {
         method: "POST",
@@ -139,6 +210,8 @@ export default function Home() {
     requestRef.current?.abort();
     weatherRequestRef.current?.abort();
     weatherRequestRef.current = null;
+    satelliteRequestRef.current?.abort();
+    satelliteRequestRef.current = null;
     const controller = new AbortController();
     requestRef.current = controller;
     setLoading(true);
@@ -149,6 +222,9 @@ export default function Home() {
     setWeather(null);
     setWeatherError("");
     setWeatherLoading(false);
+    setSatellite(null);
+    setSatelliteError("");
+    setSatelliteLoading(false);
     try {
       const response = await fetch("/api/parcels", {
         method: "POST",
@@ -221,6 +297,62 @@ export default function Home() {
               ) : null}
             </section>
           )}
+          {(satelliteLoading || satellite || satelliteError) && (
+            <section className="satellite-card" aria-live="polite" aria-label="Dane satelitarne Sentinel-2">
+              <div className="satellite-card-heading">
+                <div>
+                  <span className="satellite-kicker">SENTINEL-2 · NDVI</span>
+                  <h2>Stan roślinności działki</h2>
+                </div>
+                {satellite && <span className="satellite-source">{satellite.status === "partial" ? "częściowe pokrycie" : "L2A"}</span>}
+              </div>
+              {satelliteLoading ? (
+                <div className="satellite-status"><span className="spinner" /> Analizuję obraz Sentinel-2…</div>
+              ) : satelliteError ? (
+                <div className="satellite-error" role="alert">{satelliteError}</div>
+              ) : satellite ? (
+                satellite.status === "unavailable" ? (
+                  <p className="satellite-unavailable">Brak jakościowej obserwacji Sentinel-2 w ostatnich 90 dniach. Nie pokazano pozornego NDVI.</p>
+                ) : (
+                  <>
+                    {(satellite.currentImageUrl || satellite.historicalImageUrl) && (
+                      <div className="satellite-comparison">
+                        {satellite.currentImageUrl && (
+                          <figure>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={satellite.currentImageUrl} alt={`Obraz prawdziwokolorowy działki z ${satellite.date ?? "bieżącej obserwacji"}`} />
+                            <figcaption>Teraz · {satellite.date ?? "brak daty"}</figcaption>
+                          </figure>
+                        )}
+                        {satellite.historicalImageUrl && (
+                          <figure>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={satellite.historicalImageUrl} alt="Obraz prawdziwokolorowy działki z roku poprzedniego" />
+                            <figcaption>Rok temu · porównanie sezonowe</figcaption>
+                          </figure>
+                        )}
+                      </div>
+                    )}
+                    <div className="satellite-metrics">
+                      <div><span className="satellite-value">{satellite.ndvi?.toFixed(2) ?? "—"}</span><small>NDVI teraz</small></div>
+                      <div><span className="satellite-value">{satellite.historicalNdvi?.toFixed(2) ?? "—"}</span><small>NDVI rok temu</small></div>
+                    </div>
+                    <p className="ndvi-explanation">
+                      <strong>Co oznacza NDVI?</strong> Wskaźnik od 0 do 1 opisuje intensywność zielonego pokrycia roślin:
+                      poniżej 0,3 — słabe lub rozproszone, 0,3–0,6 — umiarkowane,
+                      powyżej 0,6 — silne. Najniższe i ujemne wartości wskazują głównie glebę, wodę lub zabudowę.
+                    </p>
+                    <p className="satellite-meta">
+                      Obserwacja: <strong>{satellite.date ?? "brak"}</strong>
+                      {" · "}chmury: <strong>{satellite.cloudCoverPercent?.toFixed(1) ?? "—"}%</strong>
+                      {" · "}rozdzielczość: <strong>{satellite.resolutionMeters ? `${satellite.resolutionMeters} m` : "—"}</strong>
+                    </p>
+                    <p className="satellite-interpretation">{satellite.interpretation}</p>
+                  </>
+                )
+              ) : null}
+            </section>
+          )}
         </div>
         <aside className="details-panel" aria-live="polite">
           <div className="panel-icon" aria-hidden="true">▧</div>
@@ -240,6 +372,27 @@ export default function Home() {
             <p className="search-help">Wpisz pełny identyfikator albo nazwę obrębu i numer.</p>
             {searchError && <p className="search-error" role="alert">{searchError}</p>}
           </form>
+          <div className="crop-select">
+            <label htmlFor="crop-type">Aktualna uprawa</label>
+            <select
+              id="crop-type"
+              value={crop}
+              onChange={(event) => {
+                const nextCrop = event.target.value;
+                setCrop(nextCrop);
+                if (parcel) void fetchSatellite(parcel, nextCrop);
+              }}
+            >
+              <option value="zboza">Zboża</option>
+              <option value="rzepak">Rzepak</option>
+              <option value="ziemniaki">Ziemniaki</option>
+              <option value="buraki">Buraki</option>
+              <option value="kukorydza">Kukurydza</option>
+              <option value="owoce">Owoce i sad</option>
+              <option value="warzywa">Warzywa</option>
+              <option value="inna">Inna uprawa</option>
+            </select>
+          </div>
           {candidates.length > 0 && (
             <div className="candidate-list" aria-live="polite">
               <p>Znaleziono kilka działek. Wybierz właściwą:</p>
