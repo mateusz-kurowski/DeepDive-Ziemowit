@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import type { HydroResult, HydroStation, ParcelResult, SatelliteResult, WeatherResult } from "../types";
+import { buildAdvice, timingLabel } from "./advice";
 import { buildSimpleTiles, buildSummary } from "./findings";
 
 type ReportMode = "simple" | "detailed";
@@ -168,6 +169,12 @@ export default function ReportView({ parcelId, point, crop }: {
     () => (summary ? buildSimpleTiles(weatherData, hydroData, satelliteArg) : []),
     [summary, weatherData, hydroData, satelliteArg],
   );
+  const advice = useMemo(
+    () => (summary
+      ? buildAdvice({ kind: summary.verdict.kind, weather: weatherData, hydro: hydroData, satellite: satelliteArg, crop, month: new Date().getMonth() })
+      : []),
+    [summary, weatherData, hydroData, satelliteArg, crop],
+  );
   const detailed = mode === "detailed";
   const cropName = cropLabels[crop] ?? "wybrana uprawa";
 
@@ -251,7 +258,9 @@ export default function ReportView({ parcelId, point, crop }: {
         <section className="report-card report-block">
           <h2 className="report-title">Co warto zrobić</h2>
           <ul className="simple-todo">
-            {summary.recommendations.map((item) => <li key={item}>{item}</li>)}
+            {advice.slice(0, 4).map((item) => (
+              <li key={item.id}><strong>{item.title}.</strong> {item.text}</li>
+            ))}
           </ul>
         </section>
       )}
@@ -267,10 +276,36 @@ export default function ReportView({ parcelId, point, crop }: {
       )}
 
       {detailed && summary && (
-        <section className="report-grid-2">
-          <div className="report-card">
-            <h2 className="report-title">Najważniejsze wnioski</h2>
-            <ul className="finding-list">
+        <>
+          <section className="report-card report-block">
+            <div className="report-section-heading">
+              <div>
+                <span className="weather-kicker">PLAN DZIAŁAŃ · DOBRANY DO TWOJEJ DZIAŁKI</span>
+                <h2 className="report-title">Rekomendacje – jak zatrzymać wodę</h2>
+              </div>
+              <span className="weather-source">{advice.length} {advice.length === 1 ? "porada" : advice.length < 5 ? "porady" : "porad"}</span>
+            </div>
+            <ol className="advice-list">
+              {advice.map((item, index) => (
+                <li key={item.id} className={`advice-card timing-${item.timing}`}>
+                  <div className="advice-icon" aria-hidden="true">{item.icon}</div>
+                  <div className="advice-body">
+                    <div className="advice-meta">
+                      <span className="advice-step">Krok {index + 1}</span>
+                      <span className="advice-timing">{timingLabel[item.timing]}</span>
+                      <span className="advice-category">{item.category}</span>
+                    </div>
+                    <h3>{item.title}</h3>
+                    <p>{item.text}</p>
+                    <p className="advice-why"><strong>Dlaczego?</strong> {item.why}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </section>
+          <section className="report-card report-block">
+            <h2 className="report-title">Najważniejsze wnioski z danych</h2>
+            <ul className="finding-list finding-grid">
               {summary.findings.map((finding) => (
                 <li key={finding.title} className={`finding level-${finding.level}`}>
                   <strong>{finding.title}</strong>
@@ -278,14 +313,8 @@ export default function ReportView({ parcelId, point, crop }: {
                 </li>
               ))}
             </ul>
-          </div>
-          <div className="report-card">
-            <h2 className="report-title">Rekomendacje – jak zatrzymać wodę</h2>
-            <ol className="recommendation-list">
-              {summary.recommendations.map((item) => <li key={item}>{item}</li>)}
-            </ol>
-          </div>
-        </section>
+          </section>
+        </>
       )}
 
       {detailed && (<>

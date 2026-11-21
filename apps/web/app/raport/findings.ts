@@ -4,10 +4,11 @@ export type FindingLevel = "good" | "info" | "warn" | "bad";
 
 export type Finding = { level: FindingLevel; title: string; text: string };
 
+export type VerdictKind = "deficit-high" | "deficit" | "flood" | "wet" | "stable";
+
 export type ReportSummary = {
-  verdict: { level: FindingLevel; title: string; text: string; plain: string };
+  verdict: { kind: VerdictKind; level: FindingLevel; title: string; text: string; plain: string };
   findings: Finding[];
-  recommendations: string[];
 };
 
 export type SimpleTile = { icon: string; label: string; status: string; hint: string; level: FindingLevel };
@@ -225,42 +226,16 @@ export function buildSummary(
   }
 
   let verdict: ReportSummary["verdict"];
-  let recommendations: string[];
   if (deficit >= 3) {
-    verdict = { level: "bad", title: "Wysokie ryzyko niedoboru wody", text: "Wskaźniki meteorologiczne i hydrologiczne wskazują na przesuszenie działki. Warto pilnie zatrzymać wodę w krajobrazie.", plain: "Na Twoim polu jest za sucho. Warto jak najszybciej zatrzymać wodę, która jeszcze została na polu i w rowach." };
-    recommendations = [
-      "Zamknij lub podnieś zastawki na rowach melioracyjnych, aby ograniczyć odpływ wody z działki.",
-      "Ogranicz uprawę płużną – uprawa uproszczona i mulcz zmniejszają parowanie z gleby.",
-      "Pozostaw resztki pożniwne i rozważ międzyplony poprawiające retencję glebową.",
-      "Jeżeli działka ma nawadnianie, planuj je wcześnie rano lub wieczorem, by ograniczyć straty na parowanie.",
-    ];
+    verdict = { kind: "deficit-high", level: "bad", title: "Wysokie ryzyko niedoboru wody", text: "Wskaźniki meteorologiczne i hydrologiczne wskazują na przesuszenie działki. Warto pilnie zatrzymać wodę w krajobrazie.", plain: "Na Twoim polu jest za sucho. Warto jak najszybciej zatrzymać wodę, która jeszcze została na polu i w rowach." };
   } else if (deficit >= 1 && deficit > surplus) {
-    verdict = { level: "warn", title: "Umiarkowane ryzyko niedoboru wody", text: "Część wskaźników wskazuje na spadek zasobów wody. Sytuację warto monitorować i przygotować działania retencyjne.", plain: "Wody zaczyna brakować. To dobry moment, żeby przygotować pole na suszę." };
-    recommendations = [
-      "Sprawdź drożność i ustawienie zastawek – utrzymuj wyższy poziom wody w rowach.",
-      "Unikaj zabiegów przesuszających glebę (głęboka orka, odkryta gleba).",
-      "Rozważ zadrzewienia śródpolne lub pasy buforowe ograniczające wiatr i parowanie.",
-    ];
+    verdict = { kind: "deficit", level: "warn", title: "Umiarkowane ryzyko niedoboru wody", text: "Część wskaźników wskazuje na spadek zasobów wody. Sytuację warto monitorować i przygotować działania retencyjne.", plain: "Wody zaczyna brakować. To dobry moment, żeby przygotować pole na suszę." };
   } else if (hasStationAlert || surplus >= 4) {
-    verdict = { level: "warn", title: "Nadmiar wody – ryzyko podtopień", text: "Gleba i cieki są mocno zasilone. Nadwyżkę warto zatrzymać na później zamiast szybko ją odprowadzać.", plain: "Wody jest bardzo dużo, a rzeki w okolicy są wysoko. Uważaj na podtopienia, a nadmiar wody zatrzymaj na później." };
-    recommendations = [
-      "Zatrzymaj nadmiar wody w oczkach wodnych, zbiornikach lub na zastawkach zamiast odprowadzać go do rzeki.",
-      "Unikaj wjazdu ciężkim sprzętem na mokre pole – grozi to zagęszczeniem gleby.",
-      "Śledź komunikaty IMGW o stanach wód na pobliskich rzekach.",
-    ];
+    verdict = { kind: "flood", level: "warn", title: "Nadmiar wody – ryzyko podtopień", text: "Gleba i cieki są mocno zasilone. Nadwyżkę warto zatrzymać na później zamiast szybko ją odprowadzać.", plain: "Wody jest bardzo dużo, a rzeki w okolicy są wysoko. Uważaj na podtopienia, a nadmiar wody zatrzymaj na później." };
   } else if (surplus >= 2) {
-    verdict = { level: "info", title: "Dobre uwilgotnienie – czas magazynować wodę", text: "Gleba jest dobrze zasilona, a opady przewyższają parowanie. To najlepszy moment, by zatrzymać tę wodę na sezon wegetacyjny.", plain: "Ziemia jest dobrze nawodniona. Zatrzymaj tę wodę na polu – przyda się latem, gdy będzie sucho." };
-    recommendations = [
-      "Podnieś zastawki na rowach, aby nadwyżka wody wsiąkała w glebę zamiast odpływać.",
-      "Kieruj spływ z pola do oczek wodnych lub zagłębień terenu zamiast do rowów odwadniających.",
-      "Unikaj wjazdu ciężkim sprzętem na mokre pole – grozi to zagęszczeniem gleby.",
-    ];
+    verdict = { kind: "wet", level: "info", title: "Dobre uwilgotnienie – czas magazynować wodę", text: "Gleba jest dobrze zasilona, a opady przewyższają parowanie. To najlepszy moment, by zatrzymać tę wodę na sezon wegetacyjny.", plain: "Ziemia jest dobrze nawodniona. Zatrzymaj tę wodę na polu – przyda się latem, gdy będzie sucho." };
   } else {
-    verdict = { level: "good", title: "Sytuacja wodna stabilna", text: "Bilans wody i wilgotność gleby są zbliżone do normy. To dobry moment, by przygotować działkę na okresy suszy.", plain: "Z wodą na Twoim polu jest w porządku. Możesz spokojnie przygotować się na suchsze dni." };
-    recommendations = [
-      "Utrzymuj zastawki w gotowości, aby szybko zatrzymać wodę w razie spadku opadów.",
-      "Dbaj o zawartość próchnicy – poprawia ona zdolność gleby do magazynowania wody.",
-    ];
+    verdict = { kind: "stable", level: "good", title: "Sytuacja wodna stabilna", text: "Bilans wody i wilgotność gleby są zbliżone do normy. To dobry moment, by przygotować działkę na okresy suszy.", plain: "Z wodą na Twoim polu jest w porządku. Możesz spokojnie przygotować się na suchsze dni." };
   }
 
   if (satelliteRaisedDeficit && deficit > surplus) {
@@ -268,10 +243,6 @@ export function buildSummary(
       ...verdict,
       text: `${verdict.text} Sentinel-2 pokazuje słabszą zieloną biomasę i wzmacnia tę ocenę. NDVI nie jest pomiarem wilgotności gleby.`,
     };
-    recommendations = [
-      ...recommendations,
-      "Sprawdź w terenie, czy słabsze zazielenienie wynika z fazy uprawy, zbioru czy niedoboru wody — sam NDVI tego nie rozstrzyga.",
-    ];
   } else if (vegetationStress) {
     verdict = {
       ...verdict,
@@ -279,5 +250,5 @@ export function buildSummary(
     };
   }
 
-  return { verdict, findings, recommendations };
+  return { verdict, findings };
 }

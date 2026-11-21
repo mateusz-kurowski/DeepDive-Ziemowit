@@ -159,7 +159,23 @@ footer { padding: 20px 4px 0; color: #88928c; font-size: 11px; }
 .finding { padding: 10px 12px; border-left: 4px solid; border-radius: 9px; }
 .finding strong { font-size: 12px; }
 .finding p { margin: 3px 0 0; color: #3d4f46; font-size: 11px; line-height: 1.5; }
-.recommendation-list { display: grid; gap: 10px; margin: 0; padding-left: 18px; color: #3d4f46; font-size: 12px; line-height: 1.55; }
+.finding-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.advice-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.advice-card { display: flex; gap: 14px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: #fbfdfc; }
+.advice-card:first-child { grid-column: 1 / -1; border-color: #cfe3d7; background: linear-gradient(135deg, #f3faf6 0%, #ffffff 70%); }
+.advice-icon { display: grid; flex: none; place-items: center; width: 46px; height: 46px; border-radius: 13px; background: white; font-size: 23px; box-shadow: 0 3px 10px #20472f14; }
+.advice-body { min-width: 0; }
+.advice-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 6px; }
+.advice-step { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.advice-timing, .advice-category { padding: 3px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; }
+.advice-category { background: #eef2f0; color: #55655c; }
+.timing-now .advice-timing { background: #fdebe7; color: #a33b28; }
+.timing-week .advice-timing { background: #fff3df; color: #8d5a10; }
+.timing-season .advice-timing { background: #e7f4ec; color: #1d6e4a; }
+.advice-card h3 { margin: 0 0 5px; font: 800 15px/1.3 "Manrope", Arial, sans-serif; color: var(--ink); }
+.advice-card p { margin: 0; color: #3d4f46; font-size: 12px; line-height: 1.55; }
+.advice-card .advice-why { margin-top: 9px; padding: 8px 10px; border-radius: 9px; background: #f2f6f4; color: #4c5d54; font-size: 11px; }
+.advice-why strong { color: var(--green); }
 .report-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
 .report-metrics.compact { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .report-metrics-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -206,6 +222,7 @@ footer { padding: 20px 4px 0; color: #88928c; font-size: 11px; }
 .report-limitations ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 11px; line-height: 1.6; }
 @media (max-width: 900px) { .app-shell { padding: 26px 22px; } .workspace { grid-template-columns: minmax(0, 1fr) 290px; } .report-top, .report-grid-2 { grid-template-columns: 1fr; } .report-metrics, .report-metrics-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .app-shell { padding: 22px 14px; } .page-header { gap: 12px; margin-bottom: 22px; } .brand-mark { width: 46px; height: 46px; } h1 { font-size: 22px; } .workspace { grid-template-columns: 1fr; } .map-frame, .map-loading { height: 52vh; min-height: 360px; } .details-panel { min-height: 270px; } .map-heading { gap: 10px; padding: 18px 16px 14px; } .map-heading h2 { font-size: 15px; } .map-heading p { font-size: 11px; } .map-hint { font-size: 10px; } }
+@media (max-width: 760px) { .advice-list, .finding-grid { grid-template-columns: 1fr; } }
 @media (max-width: 560px) { .simple-tiles { grid-template-columns: 1fr; } .simple-more { flex-direction: column; align-items: stretch; } }
 @media print {
   .report-toolbar, .report-mode, .simple-more { display: none; }
