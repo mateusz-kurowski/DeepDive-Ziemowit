@@ -42,9 +42,29 @@ function FitParcel({ parcel }: { parcel: ParcelResult | null }) {
   return null;
 }
 
-export default function ParcelMap({ onSelectPoint, parcel, className = "map-frame" }: {
+export type MapFocus = {
+  lat: number;
+  lng: number;
+  zoom: number;
+  token: number;
+};
+
+function FlyToFocus({ focus }: { focus: MapFocus | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!focus) return;
+    const target = L.latLng(focus.lat, focus.lng);
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) map.setView(target, focus.zoom, { animate: false });
+    else map.flyTo(target, focus.zoom, { duration: 1.15 });
+  }, [map, focus]);
+  return null;
+}
+
+export default function ParcelMap({ onSelectPoint, parcel, focus = null, className = "map-frame" }: {
   onSelectPoint?: (lat: number, lng: number) => void;
   parcel: ParcelResult | null;
+  focus?: MapFocus | null;
   className?: string;
 }) {
   return (
@@ -63,6 +83,7 @@ export default function ParcelMap({ onSelectPoint, parcel, className = "map-fram
           maxZoom={19}
         />
         <LimitToPoland />
+        <FlyToFocus focus={focus} />
         {onSelectPoint && <MapClick onSelectPoint={onSelectPoint} />}
         <FitParcel parcel={parcel} />
         {parcel?.geometry && <GeoJSON key={parcel.id} data={parcel.geometry as Geometry} style={{ color: "#16805b", weight: 3, fillColor: "#36b37e", fillOpacity: 0.25 }} />}

@@ -29,13 +29,17 @@ type AdviceInput = {
   month: number;
 };
 
-const MAX_ADVICE = 5;
+export const MAX_ADVICE = 5;
 
 function mm(value: number) {
   return `${Math.round(Math.abs(value))} mm`;
 }
 
-export function buildAdvice({ kind, weather, hydro, satellite, crop, month }: AdviceInput): Advice[] {
+export function buildAdvice(input: AdviceInput): Advice[] {
+  return collectAdvice(input).slice(0, MAX_ADVICE);
+}
+
+export function collectAdvice({ kind, weather, hydro, satellite, crop, month }: AdviceInput): Advice[] {
   const advice: Advice[] = [];
   const growingSeason = month >= 3 && month <= 8;
   const coldSeason = month >= 9 || month <= 1;
@@ -192,8 +196,7 @@ export function buildAdvice({ kind, weather, hydro, satellite, crop, month }: Ad
 
   return advice
     .filter((item, index, all) => all.findIndex((other) => other.id === item.id) === index)
-    .sort((a, b) => a.priority - b.priority)
-    .slice(0, MAX_ADVICE);
+    .sort((a, b) => a.priority - b.priority);
 }
 
 function cropMulchAdvice(crop: string): Advice | null {

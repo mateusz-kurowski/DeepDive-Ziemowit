@@ -4,7 +4,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "npm run build && next start"
+    "start": "npm run build && next start",
+    "advice:matrix": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/advice-matrix.mts"
   },
   "dependencies": {
     "geotiff": "^3.0.5",

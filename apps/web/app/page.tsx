@@ -2,13 +2,76 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 import type { ParcelResult } from "./types";
+import type { MapFocus } from "./components/ParcelMap";
 import BrandLogo from "./components/BrandLogo";
 const ParcelMap = dynamic(() => import("./components/ParcelMap"), {
   ssr: false,
   loading: () => <div className="map-loading">Ładowanie mapy…</div>,
 });
+
+type DemoScenario = {
+  id: string;
+  tone: "flood" | "drought" | "retention";
+  problem: string;
+  region: string;
+  detail: string;
+  crop: string;
+  parcelId: string | null;
+  lat: number;
+  lng: number;
+  label: string;
+};
+
+const DEMO_SCENARIOS: DemoScenario[] = [
+  {
+    id: "zulawy",
+    tone: "flood",
+    problem: "Ryzyko podtopień",
+    region: "Żuławy Wiślane",
+    detail: "Nowy Dwór Gdański · pszenica ozima",
+    crop: "zboza",
+    parcelId: null,
+    lat: 54.215,
+    lng: 19.012,
+    label: "Żuławy Wiślane, ryzyko podtopień. Ustaw uprawę zboża, pszenica ozima, i wczytaj działkę koło Nowego Dworu Gdańskiego.",
+  },
+  {
+    id: "wielkopolska",
+    tone: "drought",
+    problem: "Deficyt wody",
+    region: "Wielkopolska",
+    detail: "Powiat wrzesiński · kukurydza",
+    crop: "kukorydza",
+    parcelId: null,
+    lat: 52.312,
+    lng: 17.568,
+    label: "Wielkopolska, deficyt wody. Ustaw uprawę kukurydzy i wczytaj działkę w powiecie wrzesińskim.",
+  },
+  {
+    id: "kujawy",
+    tone: "retention",
+    problem: "Retencja dolinowa",
+    region: "Dolina Wisły",
+    detail: "Kujawy · burak cukrowy",
+    crop: "buraki",
+    parcelId: null,
+    lat: 53.145,
+    lng: 18.215,
+    label: "Dolina Wisły i Kujawy, retencja dolinowa. Ustaw uprawę buraka cukrowego i wczytaj działkę koło Bydgoszczy.",
+  },
+];
+
+function GuideIcon({ children }: { children: ReactNode }) {
+  return (
+    <span className="guide-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        {children}
+      </svg>
+    </span>
+  );
+}
 
 function reportUrl(parcel: ParcelResult, selectedCrop: string) {
   const params = new URLSearchParams({ id: parcel.id, crop: selectedCrop });
@@ -123,6 +186,8 @@ export default function Home() {
   const [droughtLoading, setDroughtLoading] = useState(false);
   const [droughtError, setDroughtError] = useState("");
   const [crop, setCrop] = useState("zboza");
+  const [mapFocus, setMapFocus] = useState<MapFocus | null>(null);
+  const [activeScenario, setActiveScenario] = useState<string | null>(null);
   const requestRef = useRef<AbortController | null>(null);
   const weatherRequestRef = useRef<AbortController | null>(null);
   const soilRequestRef = useRef<AbortController | null>(null);
@@ -216,6 +281,7 @@ export default function Home() {
     lat: number,
     lng: number,
     geometry: ParcelResult["geometry"] = null,
+    selectedCrop = crop,
   ) {
     weatherRequestRef.current?.abort();
     const controller = new AbortController();
@@ -239,7 +305,7 @@ export default function Home() {
       if (!response.ok) throw new Error(result.error ?? "Nie udało się pobrać danych pogodowych.");
       setWeather(result as WeatherResult);
       const weatherResult = result as WeatherResult;
-      void fetchDrought(lat, lng, crop, weatherResult.indicators.precipitationSumMm, geometry);
+      void fetchDrought(lat, lng, selectedCrop, weatherResult.indicators.precipitationSumMm, geometry);
     } catch (reason) {
       if (!(reason instanceof Error && reason.name === "AbortError")) {
         setWeatherError(reason instanceof Error ? reason.message : "Nie udało się pobrać danych pogodowych.");
@@ -312,15 +378,15 @@ export default function Home() {
     }
   }
 
-  function selectParcel(selected: ParcelResult) {
+  function selectParcel(selected: ParcelResult, selectedCrop = crop) {
     setParcel(selected);
     setCandidates([]);
     if (selected.lat != null && selected.lng != null) {
-      void fetchWeather(selected.lat, selected.lng, selected.geometry);
+      void fetchWeather(selected.lat, selected.lng, selected.geometry, selectedCrop);
       void fetchSoilTexture(selected.lat, selected.lng);
       void fetchTerrainFlow(selected);
-      void fetchSatellite(selected, crop);
-      void fetchDrought(selected.lat, selected.lng, crop, null, selected.geometry);
+      void fetchSatellite(selected, selectedCrop);
+      void fetchDrought(selected.lat, selected.lng, selectedCrop, null, selected.geometry);
     } else {
       weatherRequestRef.current?.abort();
       satelliteRequestRef.current?.abort();
@@ -340,7 +406,8 @@ export default function Home() {
     }
   }
 
-  async function selectPoint(lat: number, lng: number) {
+  async function selectPoint(lat: number, lng: number, selectedCrop = crop, scenarioId: string | null = null) {
+    setActiveScenario(scenarioId);
     requestRef.current?.abort();
     weatherRequestRef.current?.abort();
     weatherRequestRef.current = null;
@@ -385,9 +452,10 @@ export default function Home() {
       const result = await response.json();
       if (result.code === "outside-poland") setOutsidePoland(true);
       if (!response.ok) throw new Error(result.error ?? "Nie udało się znaleźć działki.");
-      selectParcel(result as ParcelResult);
+      selectParcel(result as ParcelResult, selectedCrop);
     } catch (reason) {
       if (!(reason instanceof Error && reason.name === "AbortError")) {
+        setActiveScenario(null);
         setError(reason instanceof Error ? reason.message : "Wystąpił nieznany błąd.");
       }
     } finally {
@@ -405,7 +473,10 @@ export default function Home() {
       setSearchError("Wpisz identyfikator działki.");
       return;
     }
+    await loadParcelByIdentifier(identifier);
+  }
 
+  async function loadParcelByIdentifier(identifier: string, selectedCrop = crop, scenarioId: string | null = null) {
     requestRef.current?.abort();
     weatherRequestRef.current?.abort();
     weatherRequestRef.current = null;
@@ -422,6 +493,7 @@ export default function Home() {
     setLoading(true);
     setError("");
     setSearchError("");
+    setActiveScenario(scenarioId);
     setCandidates([]);
     setParcel(null);
     setWeather(null);
@@ -449,10 +521,13 @@ export default function Home() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Nie udało się znaleźć działki.");
       const matches = result.parcels as ParcelResult[];
-      if (matches.length === 1) selectParcel(matches[0]);
+      const exact = matches.find((match) => match.id === identifier);
+      if (exact) selectParcel(exact, selectedCrop);
+      else if (matches.length === 1) selectParcel(matches[0], selectedCrop);
       else setCandidates(matches);
     } catch (reason) {
       if (!(reason instanceof Error && reason.name === "AbortError")) {
+        setActiveScenario(null);
         setSearchError(reason instanceof Error ? reason.message : "Wystąpił nieznany błąd.");
       }
     } finally {
@@ -460,6 +535,17 @@ export default function Home() {
         requestRef.current = null;
         setLoading(false);
       }
+    }
+  }
+
+  function openScenario(scenario: DemoScenario) {
+    setCrop(scenario.crop);
+    setMapFocus({ lat: scenario.lat, lng: scenario.lng, zoom: 16, token: Date.now() });
+    if (scenario.parcelId) {
+      setSearchText(scenario.parcelId);
+      void loadParcelByIdentifier(scenario.parcelId, scenario.crop, scenario.id);
+    } else {
+      void selectPoint(scenario.lat, scenario.lng, scenario.crop, scenario.id);
     }
   }
 
@@ -477,19 +563,41 @@ export default function Home() {
           </div>
           <p className="intro hero-intro">Sprawdź, ile wody ma Twoja działka i co zrobić, żeby jej nie stracić. Wpisz numer działki lub kliknij na mapie.</p>
         </div>
-        <ol className="hero-steps" aria-label="Jak to działa">
-          <li><span>1</span>Wybierz działkę</li>
-          <li><span>2</span>Sprawdź pogodę i glebę</li>
-          <li><span>3</span>Otwórz raport wodny</li>
-        </ol>
+        <div className="hero-side">
+          <div className="demo-scenarios">
+            <p className="demo-scenarios-label" id="demo-scenarios-label">SCENARIUSZE DEMO</p>
+            <div className="demo-scenarios-grid" role="group" aria-labelledby="demo-scenarios-label">
+              {DEMO_SCENARIOS.map((scenario) => (
+                <button
+                  key={scenario.id}
+                  type="button"
+                  className={`demo-scenario demo-scenario-${scenario.tone}`}
+                  aria-pressed={activeScenario === scenario.id}
+                  aria-label={scenario.label}
+                  onClick={() => openScenario(scenario)}
+                >
+                  <span className="demo-scenario-kicker">{scenario.problem}</span>
+                  <strong>{scenario.region}</strong>
+                  <small>{scenario.detail}</small>
+                  {scenario.parcelId && <small className="demo-scenario-parcel">Działka {scenario.parcelId}</small>}
+                </button>
+              ))}
+            </div>
+          </div>
+          <ol className="hero-steps" aria-label="Jak to działa">
+            <li><span>1</span>Wybierz działkę</li>
+            <li><span>2</span>Sprawdź pogodę i glebę</li>
+            <li><span>3</span>Otwórz raport wodny</li>
+          </ol>
+        </div>
       </header>
       <section className="workspace" aria-label="Wybór działki">
         <div className="map-column">
           <div className="map-heading">
-            <div><h2>Wybierz działkę</h2><p>Przybliż mapę i kliknij wewnątrz jej granic.</p></div>
+            <div><h2>Wybierz działkę</h2><p>Kliknij w granicach działki albo wybierz scenariusz demo powyżej.</p></div>
             <span className="map-hint">⌖ Kliknij punkt na mapie</span>
           </div>
-          <ParcelMap onSelectPoint={selectPoint} parcel={parcel} />
+          <ParcelMap onSelectPoint={selectPoint} parcel={parcel} focus={mapFocus} />
           <p className="attribution-note">Dane działek: GUGiK, ULDK. Podkład mapy: © OpenStreetMap.</p>
           {(weatherLoading || weather || weatherError) && (
             <section className="weather-card" aria-live="polite" aria-label="Najważniejsze dane pogodowe">
@@ -789,8 +897,6 @@ export default function Home() {
           )}
           {loading ? (
             <div className="status-message"><span className="spinner" /> Sprawdzam działkę…</div>
-          ) : error ? (
-            <div className="error-message" role="alert"><strong>{outsidePoland ? "Punkt poza granicami Polski" : "Nie udało się wybrać działki"}</strong><p>{error}</p></div>
           ) : candidates.length > 0 ? (
             <div className="empty-state"><p>Wybierz działkę z listy powyżej, aby wyświetlić jej granice na mapie.</p></div>
           ) : parcel ? (
@@ -812,7 +918,36 @@ export default function Home() {
               <p className="report-button-help">W nowej karcie: pogoda, hydrologia i wskaźniki Sentinel-2 (NDVI) dla wybranej uprawy.</p>
             </>
           ) : (
-            <div className="empty-state"><div className="empty-illustration" aria-hidden="true">⌖</div><p>Wskaż punkt na mapie, aby zobaczyć numer działki oraz dane gminy, powiatu i województwa.</p></div>
+            <>
+              {error && <div className="error-message" role="alert"><strong>{outsidePoland ? "Punkt poza granicami Polski" : "Nie udało się wybrać działki"}</strong><p>{error}</p></div>}
+              <section className="guide-card" aria-label="Jak przygotować raport">
+              <div>
+                <h3>Jak to działa</h3>
+                <ol className="guide-steps">
+                  <li>
+                    <GuideIcon><path d="M12 21c0-6 4-9 9-10-1 7-5 10-9 10z" /><path d="M12 21C12 14 7 9 3 8c1 7 5 11 9 13z" /></GuideIcon>
+                    <span>Wybierz uprawę z listy powyżej.</span>
+                  </li>
+                  <li>
+                    <GuideIcon><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" /><circle cx="12" cy="10" r="2.2" /></GuideIcon>
+                    <span>Kliknij działkę na mapie, wpisz TERYT lub wybierz scenariusz demo.</span>
+                  </li>
+                  <li>
+                    <GuideIcon><path d="M7 3.5h7.2L19 8.2V20a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 6 20V5A1.5 1.5 0 0 1 7.5 3.5z" /><path d="M14 3.5V8h4.5M8.5 13h7M8.5 17h4.5" /></GuideIcon>
+                    <span>Odbierz raport retencyjny i zalecenia melioracyjne.</span>
+                  </li>
+                </ol>
+              </div>
+              <div>
+                <h3>Co zawiera raport</h3>
+                <ul className="guide-badges">
+                  <li><i className="guide-dot" aria-hidden="true" />Bilans opadów i ET0</li>
+                  <li><i className="guide-dot guide-dot-soil" aria-hidden="true" />Wilgotność gleby (Sentinel-2)</li>
+                  <li><i className="guide-dot guide-dot-water" aria-hidden="true" />Stan wód i ryzyko (IMGW)</li>
+                </ul>
+              </div>
+              </section>
+            </>
           )}
           <div className="source-box"><span className="source-check">✓</span><p>Dane pobierane na bieżąco z usługi lokalizacji działek GUGiK (ULDK).</p></div>
         </aside>

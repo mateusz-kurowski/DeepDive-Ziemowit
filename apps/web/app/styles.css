@@ -180,6 +180,24 @@ h1 { margin-bottom: 5px; font: 800 1.8125rem/1.2 "Manrope", Arial, sans-serif; l
 .map-heading h2, .details-panel h2 { margin: 0 0 5px; font: 700 1.0625rem "Manrope", Arial, sans-serif; }
 .map-heading p { margin: 0; color: var(--muted); font-size: .8125rem; }
 .map-hint { padding: 9px 12px; border-radius: 9px; background: var(--surface-tint); color: var(--accent-text); font-size: .75rem; font-weight: 600; }
+.hero-side { display: grid; gap: 14px; width: min(560px, 100%); }
+.demo-scenarios { padding: 0; }
+.demo-scenario-parcel { color: var(--muted) !important; font-variant-numeric: tabular-nums; word-break: break-all; }
+.demo-scenarios-label { margin: 0 0 8px; color: var(--muted); font-size: .5625rem; font-weight: 800; letter-spacing: .09em; }
+.demo-scenarios-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.demo-scenario { display: grid; gap: 2px; min-width: 0; padding: 11px 12px 12px; border: var(--border-width) solid var(--line); border-radius: 14px; background: var(--surface-2); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: border-color .15s ease, background-color .15s ease; }
+.demo-scenario:hover { border-color: var(--green); background: var(--surface-tint); }
+.demo-scenario:disabled { opacity: .65; cursor: wait; }
+.demo-scenario-kicker { color: var(--muted); font-size: .5625rem; font-weight: 800; letter-spacing: .06em; }
+.demo-scenario strong { font: 700 .8125rem/1.3 "Manrope", Arial, sans-serif; }
+.demo-scenario small { color: var(--ink-2); font-size: .625rem; line-height: 1.35; }
+.demo-scenario-flood .demo-scenario-kicker { color: var(--info); }
+.demo-scenario-drought .demo-scenario-kicker { color: var(--warn); }
+.demo-scenario-retention .demo-scenario-kicker { color: var(--accent-text); }
+.demo-scenario-flood[aria-pressed="true"] { border-color: var(--info); background: var(--info-bg); box-shadow: inset 3px 0 0 var(--info); }
+.demo-scenario-drought[aria-pressed="true"] { border-color: var(--warn); background: var(--warn-bg); box-shadow: inset 3px 0 0 var(--warn); }
+.demo-scenario-retention[aria-pressed="true"] { border-color: var(--green); background: var(--surface-tint); box-shadow: inset 3px 0 0 var(--green); }
+@media (prefers-reduced-motion: reduce) { .demo-scenario { transition: none; } }
 .map-frame { height: min(66vh, 620px); min-height: 440px; background: var(--map-bg); }
 .leaflet-map { width: 100%; height: 100%; z-index: 1; }
 .map-loading { display: grid; place-items: center; height: min(66vh, 620px); min-height: 440px; color: var(--muted); }
@@ -318,6 +336,20 @@ html[data-contrast="high"] .drought-legend i { outline: 1px solid var(--line); }
 .empty-state { padding: 28px 8px 36px; text-align: center; color: var(--muted); }
 .empty-illustration { display: grid; place-items: center; width: 72px; height: 72px; margin: 0 auto 18px; border: 1px dashed var(--line-2); border-radius: 50%; color: var(--green); font-size: 2.125rem; }
 .empty-state p { max-width: 245px; margin: 0 auto; font-size: .8125rem; line-height: 1.65; }
+.guide-card { display: flex; flex: 1; flex-direction: column; justify-content: space-between; gap: 20px; min-height: 240px; margin: 2px 0 0; padding: 16px; border: var(--border-width) solid var(--line); border-radius: 14px; background: var(--surface-2); }
+.details-panel:has(.guide-card) .source-box { margin-top: 16px; }
+.guide-card h3 { margin: 0 0 10px; color: var(--ink); font: 700 .8125rem "Manrope", Arial, sans-serif; }
+.guide-steps, .guide-badges { margin: 0; padding: 0; list-style: none; }
+.guide-steps { display: grid; gap: 10px; }
+.guide-steps li { display: flex; align-items: flex-start; gap: 10px; color: var(--ink-2); font-size: .75rem; line-height: 1.45; }
+.guide-icon { display: grid; flex: none; place-items: center; width: 28px; height: 28px; border: var(--border-width) solid var(--line); border-radius: 8px; background: var(--surface); color: var(--green); }
+.guide-steps li:nth-child(2) .guide-icon { color: var(--info); }
+.guide-steps li:nth-child(3) .guide-icon { color: var(--warn); }
+.guide-badges { display: grid; gap: 6px; }
+.guide-badges li { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: var(--border-width) solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink-2); font-size: .6875rem; font-weight: 700; line-height: 1.35; }
+.guide-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--rain); }
+.guide-dot-soil { background: var(--good); }
+.guide-dot-water { background: var(--info); }
 .parcel-number { margin: -7px 0 18px; color: var(--green); font: 800 1.625rem "Manrope", Arial, sans-serif; }
 .parcel-data { margin: 0; }
 .parcel-data div { padding: 12px 0; border-top: var(--border-width) solid var(--line); }
@@ -330,6 +362,7 @@ html[data-contrast="high"] .drought-legend i { outline: 1px solid var(--line); }
 .source-box p { margin: 0; color: var(--faint); font-size: .625rem; line-height: 1.5; }
 .source-check { color: var(--good); font-size: .8125rem; }
 .error-message { padding: 14px; border: var(--border-width) solid var(--danger-line); border-radius: 10px; background: var(--danger-bg); color: var(--danger); }
+.error-message + .guide-card { margin-top: 12px; }
 .error-message strong { font-size: .8125rem; }
 .error-message p { margin: 6px 0 0; font-size: .75rem; line-height: 1.5; }
 .status-message { display: flex; align-items: center; gap: 10px; padding: 20px 0; color: var(--muted); font-size: .8125rem; }
@@ -505,7 +538,7 @@ html[data-contrast="high"] .station-status { border-color: currentColor; }
 @media (max-width: 700px) { .app-shell { padding: 64px 14px 22px; } .page-header { gap: 12px; margin-bottom: 22px; } .brand-mark { width: 46px; height: 46px; } h1 { font-size: 1.375rem; } .workspace { grid-template-columns: 1fr; } .map-frame, .map-loading { height: 52vh; min-height: 360px; } .details-panel { min-height: 270px; } .map-heading { gap: 10px; padding: 18px 16px 14px; } .map-heading h2 { font-size: .9375rem; } .map-heading p { font-size: .6875rem; } .map-hint { font-size: .625rem; } .report-toolbar { padding-right: 0; } .hero { margin-top: 0; padding: 22px 18px; border-radius: 18px; } .hero-brand { gap: 14px; } .hero-logo { width: 56px; height: 56px; } .brand-name { font-size: 2.125rem; } .brand-slogan { font-size: 1rem; } .hero-steps { flex-direction: column; } .report-toolbar { flex-wrap: wrap; gap: 12px; } }
 @media (max-width: 900px) { .soil-fractions { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .terrain-flow-groups { grid-template-columns: 1fr; } }
-@media (max-width: 560px) { .terrain-flow-summary { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .terrain-flow-summary { grid-template-columns: 1fr; } .demo-scenarios-grid { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { .advice-list, .finding-grid, .simple-advice { grid-template-columns: 1fr; } }
 @media (max-width: 560px) { .simple-tiles { grid-template-columns: 1fr; } .simple-more { flex-direction: column; align-items: stretch; } }
 @media print {
