@@ -91,14 +91,16 @@ async function fetchHeights(points: Array<{ x: number; y: number }>): Promise<nu
       const text = (await response.text()).trim();
       if (!response.ok) throw new Error(`Usługa NMT zwróciła HTTP ${response.status}.`);
       const returned = text.split(",");
-      if (returned.length !== chunk.length) throw new Error("Usługa NMT zwróciła niepełną listę wysokości.");
-      for (let i = 0; i < returned.length; i += 1) {
-        const match = /^\s*(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s*$/.exec(returned[i]);
+      const requestedIndexes = new Map(chunk.map((point, index) => [`${point.x.toFixed(2)}:${point.y.toFixed(2)}`, index]));
+      for (const tuple of returned) {
+        const match = /^\s*(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s*$/.exec(tuple);
         if (!match) continue;
         const x = Number(match[1]);
         const y = Number(match[2]);
-        if (Math.abs(x - chunk[i].x) < 0.02 && Math.abs(y - chunk[i].y) < 0.02) {
-          output[chunkIndex * LIST_BATCH_SIZE + i] = Number(match[3]);
+        const localIndex = requestedIndexes.get(`${x.toFixed(2)}:${y.toFixed(2)}`);
+        const elevation = Number(match[3]);
+        if (localIndex !== undefined && elevation >= -100 && elevation <= 3000) {
+          output[chunkIndex * LIST_BATCH_SIZE + localIndex] = elevation;
         }
       }
     }
@@ -401,7 +403,8 @@ export async function POST(request: Request) {
     const heights = await fetchHeights(points);
     const summary = summarizeFlow(heights, inside, width, height, step, minX, maxY, polygons2180);
     if (summary.validSampleCount < 4) {
-      return NextResponse.json({ error: "NMT nie zwrócił wystarczającej liczby wysokości dla tej działki." }, { status: 502 });
+      const available = heights.filter(Number.isFinite).length;
+      return NextResponse.json({ error: `NMT zwrócił tylko ${available} z ${heights.length} wysokości; to za mało do wyznaczenia spływu.` }, { status: 502 });
     }
     const incomplete = heights.filter(Number.isFinite).length < heights.length;
     const result = {
