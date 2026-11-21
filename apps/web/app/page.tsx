@@ -11,6 +11,23 @@ const ParcelMap = dynamic(() => import("./components/ParcelMap"), {
   loading: () => <div className="map-loading">Ładowanie mapy…</div>,
 });
 
+type WeatherResult = {
+  date: string;
+  indicators: {
+    precipitationSumMm: number | null;
+    averageTemperatureC: number | null;
+    longestDrySpellDays: number | null;
+  };
+  historicalSummary: {
+    status: "available" | "partial" | "unavailable";
+    differencePercent: number | null;
+    assessment: string;
+  };
+  source: {
+    provider: string;
+  };
+};
+
 export default function Home() {
   const [parcel, setParcel] = useState<ParcelResult | null>(null);
   const [error, setError] = useState("");
@@ -18,12 +35,67 @@ export default function Home() {
   const [searchText, setSearchText] = useState("");
   const [candidates, setCandidates] = useState<ParcelResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [weather, setWeather] = useState<WeatherResult | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
+  const [weatherError, setWeatherError] = useState("");
   const requestRef = useRef<AbortController | null>(null);
+  const weatherRequestRef = useRef<AbortController | null>(null);
 
-  useEffect(() => () => requestRef.current?.abort(), []);
+  useEffect(() => () => {
+    requestRef.current?.abort();
+    weatherRequestRef.current?.abort();
+  }, []);
+
+  async function fetchWeather(lat: number, lng: number) {
+    weatherRequestRef.current?.abort();
+    const controller = new AbortController();
+    weatherRequestRef.current = controller;
+    setWeatherLoading(true);
+    setWeatherError("");
+    setWeather(null);
+
+    const today = new Date();
+    const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+    try {
+      const response = await fetch("/api/weather", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ latitude: lat, longitude: lng, date }),
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Nie udało się pobrać danych pogodowych.");
+      setWeather(result as WeatherResult);
+    } catch (reason) {
+      if (!(reason instanceof Error && reason.name === "AbortError")) {
+        setWeatherError(reason instanceof Error ? reason.message : "Nie udało się pobrać danych pogodowych.");
+      }
+    } finally {
+      if (weatherRequestRef.current === controller) {
+        weatherRequestRef.current = null;
+        setWeatherLoading(false);
+      }
+    }
+  }
+
+  function selectParcel(selected: ParcelResult) {
+    setParcel(selected);
+    setCandidates([]);
+    if (selected.lat != null && selected.lng != null) {
+      void fetchWeather(selected.lat, selected.lng);
+    } else {
+      weatherRequestRef.current?.abort();
+      setWeather(null);
+      setWeatherError("");
+    }
+  }
 
   async function selectPoint(lat: number, lng: number) {
     requestRef.current?.abort();
+    weatherRequestRef.current?.abort();
+    weatherRequestRef.current = null;
     const controller = new AbortController();
     requestRef.current = controller;
     setLoading(true);
@@ -31,6 +103,9 @@ export default function Home() {
     setSearchError("");
     setCandidates([]);
     setParcel(null);
+    setWeather(null);
+    setWeatherError("");
+    setWeatherLoading(false);
     try {
       const response = await fetch("/api/parcels", {
         method: "POST",
@@ -40,7 +115,7 @@ export default function Home() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Nie udało się znaleźć działki.");
-      setParcel(result as ParcelResult);
+      selectParcel(result as ParcelResult);
     } catch (reason) {
       if (!(reason instanceof Error && reason.name === "AbortError")) {
         setError(reason instanceof Error ? reason.message : "Wystąpił nieznany błąd.");
@@ -62,6 +137,8 @@ export default function Home() {
     }
 
     requestRef.current?.abort();
+    weatherRequestRef.current?.abort();
+    weatherRequestRef.current = null;
     const controller = new AbortController();
     requestRef.current = controller;
     setLoading(true);
@@ -69,6 +146,9 @@ export default function Home() {
     setSearchError("");
     setCandidates([]);
     setParcel(null);
+    setWeather(null);
+    setWeatherError("");
+    setWeatherLoading(false);
     try {
       const response = await fetch("/api/parcels", {
         method: "POST",
@@ -79,7 +159,7 @@ export default function Home() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Nie udało się znaleźć działki.");
       const matches = result.parcels as ParcelResult[];
-      if (matches.length === 1) setParcel(matches[0]);
+      if (matches.length === 1) selectParcel(matches[0]);
       else setCandidates(matches);
     } catch (reason) {
       if (!(reason instanceof Error && reason.name === "AbortError")) {
@@ -111,6 +191,36 @@ export default function Home() {
           </div>
           <ParcelMap onSelectPoint={selectPoint} parcel={parcel} />
           <p className="attribution-note">Dane działek: GUGiK, ULDK. Podkład mapy: © OpenStreetMap.</p>
+          {(weatherLoading || weather || weatherError) && (
+            <section className="weather-card" aria-live="polite" aria-label="Najważniejsze dane pogodowe">
+              <div className="weather-card-heading">
+                <div>
+                  <span className="weather-kicker">METEO · {weather?.date ?? "ostatnie 30 dni"}</span>
+                  <h2>Warunki pogodowe działki</h2>
+                </div>
+                {weather && <span className="weather-source">{weather.source.provider}</span>}
+              </div>
+              {weatherLoading ? (
+                <div className="weather-status"><span className="spinner" /> Pobieram dane pogodowe…</div>
+              ) : weatherError ? (
+                <div className="weather-error" role="alert">{weatherError}</div>
+              ) : weather ? (
+                <>
+                  <div className="weather-metrics">
+                    <div><span className="weather-value">{weather.indicators.precipitationSumMm ?? "—"}</span><span className="weather-unit">mm</span><small>Suma opadów / 30 dni</small></div>
+                    <div><span className="weather-value">{weather.indicators.averageTemperatureC ?? "—"}</span><span className="weather-unit">°C</span><small>Średnia temperatura</small></div>
+                    <div><span className="weather-value">{weather.indicators.longestDrySpellDays ?? "—"}</span><span className="weather-unit">dni</span><small>Najdłużej bez opadów</small></div>
+                  </div>
+                  {weather.historicalSummary.status !== "unavailable" && weather.historicalSummary.differencePercent !== null && (
+                    <p className="weather-history">
+                      <strong>{weather.historicalSummary.differencePercent > 0 ? "+" : ""}{weather.historicalSummary.differencePercent}%</strong>
+                      {" "}w porównaniu do średniej historycznej opadów.
+                    </p>
+                  )}
+                </>
+              ) : null}
+            </section>
+          )}
         </div>
         <aside className="details-panel" aria-live="polite">
           <div className="panel-icon" aria-hidden="true">▧</div>
@@ -134,7 +244,7 @@ export default function Home() {
             <div className="candidate-list" aria-live="polite">
               <p>Znaleziono kilka działek. Wybierz właściwą:</p>
               {candidates.map((candidate) => (
-                <button className="candidate-option" key={candidate.id} onClick={() => { setParcel(candidate); setCandidates([]); }}>
+                <button className="candidate-option" key={candidate.id} onClick={() => selectParcel(candidate)}>
                   <strong>{candidate.parcel}</strong>
                   <span>{[candidate.commune, candidate.county, candidate.voivodeship].filter(Boolean).join(", ")}</span>
                   <small>{candidate.id}</small>
