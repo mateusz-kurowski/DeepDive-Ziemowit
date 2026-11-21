@@ -57,6 +57,7 @@ type DroughtResult = {
   } | null;
   previewUrl: string | null;
   categoryPercentages: Record<"1" | "2" | "3" | "4", number>;
+  unavailableReason: "classification" | "service" | null;
   precipitation30DaysMm: number | null;
   precipitationDeficitMm: number | null;
   currentRisk: "niski" | "umiarkowany" | "wysoki" | "bardzo wysoki" | "brak danych";
@@ -387,7 +388,14 @@ export default function Home() {
                 <div className="drought-error" role="alert">{droughtError}</div>
               ) : drought ? (
                 drought.status === "unavailable" || !drought.category ? (
-                  <p className="drought-unavailable">Brak danych o podatności gleby dla tej lokalizacji.</p>
+                  <div className="drought-unavailable">
+                    <strong>Brak danych o podatności gleby dla tej lokalizacji.</strong>
+                    {drought.unavailableReason === "classification" ? (
+                      <p>Warstwa IUNG nie przypisała działce kategorii I–IV podatności gleby. Działka lub jej część może należeć do gleby organicznej, lasu, wody, zabudowy, nieużytków, terenów komunikacyjnych albo obszaru niesklasyfikowanego.</p>
+                    ) : (
+                      <p>Usługa IUNG-PIB nie zwróciła w tym momencie prawidłowej warstwy klasyfikacji. Spróbuj ponownie później.</p>
+                    )}
+                  </div>
                 ) : (
                   <>
                     <div className="drought-metrics">

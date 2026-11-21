@@ -23,6 +23,7 @@ type DroughtResult = {
   category: DroughtCategory | null;
   previewUrl: string | null;
   categoryPercentages: Record<"1" | "2" | "3" | "4", number>;
+  unavailableReason: "classification" | "service" | null;
   crop: string;
   precipitation30DaysMm: number | null;
   cropRainfallMinimumMm30Days: number;
@@ -286,6 +287,7 @@ export async function POST(request: Request) {
       category,
       previewUrl: soilData.previewUrl,
       categoryPercentages: soilData.categoryPercentages,
+      unavailableReason: category ? null : "classification",
       crop,
       precipitation30DaysMm: precipitation,
       cropRainfallMinimumMm30Days: minimum,
@@ -309,6 +311,7 @@ export async function POST(request: Request) {
       category: null,
       previewUrl: null,
       categoryPercentages: { "1": 0, "2": 0, "3": 0, "4": 0 },
+      unavailableReason: "service",
       crop,
       precipitation30DaysMm: precipitation,
       cropRainfallMinimumMm30Days: minimum,

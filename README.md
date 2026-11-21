@@ -136,6 +136,13 @@ punkcie centroidu:
 - IV — mało podatna,
 - gleby organiczne i inne obszary mogą mieć osobne klasy bez oceny suszy.
 
+Jeżeli działka nie ma kategorii I–IV, komunikat „brak danych” oznacza, że
+warstwa IUNG przypisała jej obszar do klasy spoza kategorii podatności gleby,
+np. gleby organiczne, las, wodę, zabudowę, nieużytki lub obszar
+niesklasyfikowany. Jeśli usługa IUNG nie odpowiada lub zwraca błąd, aplikacja
+podaje osobny komunikat o niedostępności warstwy. Brak kategorii nie oznacza
+„niskej podatności” ani potwierdzonego braku suszy.
+
 Warstwa IUNG opisuje **podatność gleby**, a nie bieżące zagrożenie suszą.
 Karta aplikacji zestawia ją z sumą opadów z ostatnich 30 dni pobieraną
 przez Open-Meteo oraz orientacyjnym minimum opadów dla wyboru uprawy.
