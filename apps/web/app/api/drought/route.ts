@@ -22,6 +22,7 @@ type DroughtResult = {
   layerDate: "2024";
   category: DroughtCategory | null;
   previewUrl: string | null;
+  categoryPercentages: Record<"1" | "2" | "3" | "4", number>;
   crop: string;
   precipitation30DaysMm: number | null;
   cropRainfallMinimumMm30Days: number;
@@ -93,7 +94,11 @@ async function getSoilCategory(
   lat: number,
   lng: number,
   geometry: Geometry | null,
-): Promise<{ category: DroughtCategory | null; previewUrl: string | null }> {
+): Promise<{
+  category: DroughtCategory | null;
+  previewUrl: string | null;
+  categoryPercentages: Record<"1" | "2" | "3" | "4", number>;
+}> {
   const [centerX, centerY] = proj4("EPSG:4326", "EPSG:2180", [lng, lat]) as number[];
   const projectedRings: number[][][] = [];
   if (geometry?.type === "Polygon") {
@@ -190,10 +195,21 @@ async function getSoilCategory(
   const png = await sharp(Buffer.from(rgba), {
     raw: { width, height, channels: 4 },
   }).resize({ width: 220, height: 150, fit: "inside", withoutEnlargement: true }).png().toBuffer();
+  const totalCategoryPixels = [1, 2, 3, 4].reduce(
+    (total, code) => total + (counts.get(code) ?? 0),
+    0,
+  );
+  const categoryPercentages = {
+    "1": totalCategoryPixels > 0 ? Number(((counts.get(1) ?? 0) * 100 / totalCategoryPixels).toFixed(1)) : 0,
+    "2": totalCategoryPixels > 0 ? Number(((counts.get(2) ?? 0) * 100 / totalCategoryPixels).toFixed(1)) : 0,
+    "3": totalCategoryPixels > 0 ? Number(((counts.get(3) ?? 0) * 100 / totalCategoryPixels).toFixed(1)) : 0,
+    "4": totalCategoryPixels > 0 ? Number(((counts.get(4) ?? 0) * 100 / totalCategoryPixels).toFixed(1)) : 0,
+  };
 
   return {
     category: dominantCode ? categoryMap[dominantCode] : null,
     previewUrl: `data:image/png;base64,${png.toString("base64")}`,
+    categoryPercentages,
   };
 }
 
@@ -269,6 +285,7 @@ export async function POST(request: Request) {
       layerDate: "2024",
       category,
       previewUrl: soilData.previewUrl,
+      categoryPercentages: soilData.categoryPercentages,
       crop,
       precipitation30DaysMm: precipitation,
       cropRainfallMinimumMm30Days: minimum,
@@ -291,6 +308,7 @@ export async function POST(request: Request) {
       layerDate: "2024",
       category: null,
       previewUrl: null,
+      categoryPercentages: { "1": 0, "2": 0, "3": 0, "4": 0 },
       crop,
       precipitation30DaysMm: precipitation,
       cropRainfallMinimumMm30Days: minimum,

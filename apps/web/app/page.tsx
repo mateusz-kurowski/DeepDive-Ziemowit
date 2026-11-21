@@ -56,6 +56,7 @@ type DroughtResult = {
     susceptibility: string;
   } | null;
   previewUrl: string | null;
+  categoryPercentages: Record<"1" | "2" | "3" | "4", number>;
   precipitation30DaysMm: number | null;
   precipitationDeficitMm: number | null;
   currentRisk: "niski" | "umiarkowany" | "wysoki" | "bardzo wysoki" | "brak danych";
@@ -406,6 +407,12 @@ export default function Home() {
                         <figcaption>Wycinek mapy IUNG dla działki</figcaption>
                       </figure>
                     )}
+                    <div className="drought-legend" aria-label="Legenda kategorii podatności gleby IUNG">
+                      <span><i className="drought-legend-1" />I — bardzo podatna <strong>{drought.categoryPercentages["1"].toFixed(1)}%</strong></span>
+                      <span><i className="drought-legend-2" />II — podatna <strong>{drought.categoryPercentages["2"].toFixed(1)}%</strong></span>
+                      <span><i className="drought-legend-3" />III — średnio podatna <strong>{drought.categoryPercentages["3"].toFixed(1)}%</strong></span>
+                      <span><i className="drought-legend-4" />IV — mało podatna <strong>{drought.categoryPercentages["4"].toFixed(1)}%</strong></span>
+                    </div>
                     <p className="drought-interpretation">{drought.interpretation}</p>
                     {drought.precipitationDeficitMm !== null && drought.precipitationDeficitMm > 0 && (
                       <p className="drought-deficit">Niedobór względem orientacyjnego progu: <strong>{drought.precipitationDeficitMm.toFixed(1)} mm</strong></p>
