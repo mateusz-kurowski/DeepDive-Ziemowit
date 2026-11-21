@@ -258,7 +258,7 @@ export default function ReportView({ parcelId, point, crop }: {
         <section className="report-card report-block">
           <h2 className="report-title">Co warto zrobić</h2>
           <ul className="simple-advice">
-            {advice.slice(0, 4).map((item) => (
+            {advice.map((item) => (
               <li key={item.id} className={`timing-${item.timing}`}>
                 <span className="advice-icon" aria-hidden="true">{item.icon}</span>
                 <div>
