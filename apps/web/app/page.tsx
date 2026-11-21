@@ -333,7 +333,11 @@ export default function Home() {
             <div><h2>Wybierz działkę</h2><p>Przybliż mapę i kliknij wewnątrz jej granic.</p></div>
             <span className="map-hint">⌖ Kliknij punkt na mapie</span>
           </div>
-          <ParcelMap onSelectPoint={selectPoint} parcel={parcel} />
+          <ParcelMap
+            onSelectPoint={selectPoint}
+            parcel={parcel}
+            showDroughtLayer={Boolean(parcel && drought?.category)}
+          />
           <p className="attribution-note">Dane działek: GUGiK, ULDK. Podkład mapy: © OpenStreetMap.</p>
           {(weatherLoading || weather || weatherError) && (
             <section className="weather-card" aria-live="polite" aria-label="Najważniejsze dane pogodowe">
@@ -397,6 +401,12 @@ export default function Home() {
                     {drought.precipitationDeficitMm !== null && drought.precipitationDeficitMm > 0 && (
                       <p className="drought-deficit">Niedobór względem orientacyjnego progu: <strong>{drought.precipitationDeficitMm.toFixed(1)} mm</strong></p>
                     )}
+                    <div className="drought-legend" aria-label="Legenda mapy podatności gleby">
+                      <span><i className="drought-color drought-1" /> Kategoria I</span>
+                      <span><i className="drought-color drought-2" /> II</span>
+                      <span><i className="drought-color drought-3" /> III</span>
+                      <span><i className="drought-color drought-4" /> IV</span>
+                    </div>
                     <p className="drought-source">Warstwa IUNG 2024 · {drought.provider} · dane nie są bieżącym monitorowaniem suszy</p>
                   </>
                 )

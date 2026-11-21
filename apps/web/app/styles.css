@@ -47,6 +47,13 @@ h1 { margin-bottom: 5px; font: 800 29px/1.2 "Manrope", Arial, sans-serif; letter
 .drought-interpretation { margin: 10px 0 5px; color: #6d6656; font-size: 10px; line-height: 1.55; }
 .drought-deficit { margin: 5px 0; color: #80652f; font-size: 10px; }
 .drought-source { margin: 7px 0 0; color: #958970; font-size: 9px; }
+.drought-legend { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; margin-top: 8px; }
+.drought-legend span { display: flex; align-items: center; gap: 4px; color: #7d745f; font-size: 8px; }
+.drought-color { width: 9px; height: 9px; border-radius: 2px; }
+.drought-1 { background: #FFFF54; }
+.drought-2 { background: #FF9D00; }
+.drought-3 { background: #FD4200; }
+.drought-4 { background: #804000; }
 .drought-status { display: flex; align-items: center; gap: 9px; color: #718078; font-size: 12px; }
 .drought-error, .drought-unavailable { color: #973f31; font-size: 11px; line-height: 1.45; }
 .satellite-card { margin: 0 16px 16px; padding: 16px 18px; border: 1px solid #dde5ec; border-radius: 14px; background: linear-gradient(135deg, #f8fafc 0%, #eef4f7 100%); }
