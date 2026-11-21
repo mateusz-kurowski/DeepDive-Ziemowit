@@ -1,0 +1,2623 @@
+{
+  "generatedAt": "2026-11-21T18:38:56.899Z",
+  "source": "ISRIC SoilGrids WCS 2.0.1; GUGiK ULDK GetParcelByXY",
+  "request": {
+    "properties": [
+      "sand",
+      "silt",
+      "clay"
+    ],
+    "depths": [
+      "0-5cm",
+      "5-15cm",
+      "15-30cm"
+    ],
+    "statistics": [
+      "mean",
+      "Q0.5"
+    ],
+    "outputFormat": "GEOTIFF_INT16",
+    "subsettingCrs": "EPSG:4326",
+    "outputCrs": "EPSG:4326",
+    "bboxHalfSizeDegrees": 0.004,
+    "maxConcurrent": 4
+  },
+  "units": "SoilGrids returns texture fractions in g/kg; percent = g/kg / 10.",
+  "samples": [
+    {
+      "name": "Krośniewice — centrum Polski",
+      "lat": 52.251,
+      "lng": 19.249,
+      "parcel": {
+        "status": "found",
+        "id": "100204_5.0013.39",
+        "parcel": "39",
+        "commune": "Krośniewice",
+        "county": "powiat kutnowski",
+        "voivodeship": "łódzkie"
+      },
+      "groups": [
+        {
+          "depth": "0-5cm",
+          "statistic": "mean",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "0-5cm",
+              "statistic": "mean",
+              "valueGkg": 736,
+              "percent": 73.6,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  19.246,
+                  52.25366666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "0-5cm",
+              "statistic": "mean",
+              "valueGkg": 185,
+              "percent": 18.5,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  19.246,
+                  52.25366666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "0-5cm",
+              "statistic": "mean",
+              "valueGkg": 79,
+              "percent": 7.9,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  19.246,
+                  52.25366666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 1000,
+          "sumPercent": 100,
+          "hasZeroWithoutNoDataTag": false
+        },
+        {
+          "depth": "0-5cm",
+          "statistic": "Q0.5",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "0-5cm",
+              "statistic": "Q0.5",
+              "valueGkg": 764,
+              "percent": 76.4,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  19.246,
+                  52.25366666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "0-5cm",
+              "statistic": "Q0.5",
+              "valueGkg": 156,
+              "percent": 15.6,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  19.246,
+                  52.25366666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "0-5cm",
+              "statistic": "Q0.5",
+              "valueGkg": 50,
+              "percent": 5,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  19.246,
+                  52.25366666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 970,
+          "sumPercent": 97,
+          "hasZeroWithoutNoDataTag": false
+        },
+        {
+          "depth": "5-15cm",
+          "statistic": "mean",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "5-15cm",
+              "statistic": "mean",
+              "valueGkg": 742,
+              "percent": 74.2,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  19.246,
+                  52.25366666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "5-15cm",
+              "statistic": "mean",
+              "valueGkg": 187,
+              "percent": 18.7,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  19.246,
+                  52.25366666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "5-15cm",
+              "statistic": "mean",
+              "valueGkg": 71,
+              "percent": 7.1,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  19.246,
+                  52.25366666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 1000,
+          "sumPercent": 100,
+          "hasZeroWithoutNoDataTag": false
+        },
+        {
+          "depth": "5-15cm",
+          "statistic": "Q0.5",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "5-15cm",
+              "statistic": "Q0.5",
+              "valueGkg": 764,
+              "percent": 76.4,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  19.246,
+                  52.25366666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "5-15cm",
+              "statistic": "Q0.5",
+              "valueGkg": 156,
+              "percent": 15.6,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  19.246,
+                  52.25366666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "5-15cm",
+              "statistic": "Q0.5",
+              "valueGkg": 51,
+              "percent": 5.1,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  19.246,
+                  52.25366666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 971,
+          "sumPercent": 97.1,
+          "hasZeroWithoutNoDataTag": false
+        },
+        {
+          "depth": "15-30cm",
+          "statistic": "mean",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "15-30cm",
+              "statistic": "mean",
+              "valueGkg": 674,
+              "percent": 67.4,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  19.246,
+                  52.25366666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "15-30cm",
+              "statistic": "mean",
+              "valueGkg": 206,
+              "percent": 20.6,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  19.246,
+                  52.25366666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "15-30cm",
+              "statistic": "mean",
+              "valueGkg": 120,
+              "percent": 12,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  19.246,
+                  52.25366666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 1000,
+          "sumPercent": 100,
+          "hasZeroWithoutNoDataTag": false
+        },
+        {
+          "depth": "15-30cm",
+          "statistic": "Q0.5",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "15-30cm",
+              "statistic": "Q0.5",
+              "valueGkg": 746,
+              "percent": 74.6,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  19.246,
+                  52.25366666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "15-30cm",
+              "statistic": "Q0.5",
+              "valueGkg": 160,
+              "percent": 16,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  19.246,
+                  52.25366666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "15-30cm",
+              "statistic": "Q0.5",
+              "valueGkg": 56,
+              "percent": 5.6,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  19.246,
+                  52.25366666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 962,
+          "sumPercent": 96.2,
+          "hasZeroWithoutNoDataTag": false
+        }
+      ]
+    },
+    {
+      "name": "Ryki — wschodnia Polska",
+      "lat": 51.601,
+      "lng": 21.999,
+      "parcel": {
+        "status": "found",
+        "id": "061604_5.0026.82",
+        "parcel": "82",
+        "commune": "Ryki",
+        "county": "powiat rycki",
+        "voivodeship": "lubelskie"
+      },
+      "groups": [
+        {
+          "depth": "0-5cm",
+          "statistic": "mean",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "0-5cm",
+              "statistic": "mean",
+              "valueGkg": 414,
+              "percent": 41.4,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.996,
+                  51.603666666666655
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "0-5cm",
+              "statistic": "mean",
+              "valueGkg": 432,
+              "percent": 43.2,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.996,
+                  51.603666666666655
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "0-5cm",
+              "statistic": "mean",
+              "valueGkg": 154,
+              "percent": 15.4,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.996,
+                  51.603666666666655
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 1000,
+          "sumPercent": 100,
+          "hasZeroWithoutNoDataTag": false
+        },
+        {
+          "depth": "0-5cm",
+          "statistic": "Q0.5",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "0-5cm",
+              "statistic": "Q0.5",
+              "valueGkg": 378,
+              "percent": 37.8,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.996,
+                  51.603666666666655
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "0-5cm",
+              "statistic": "Q0.5",
+              "valueGkg": 337,
+              "percent": 33.7,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.996,
+                  51.603666666666655
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "0-5cm",
+              "statistic": "Q0.5",
+              "valueGkg": 55,
+              "percent": 5.5,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.996,
+                  51.603666666666655
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 770,
+          "sumPercent": 77,
+          "hasZeroWithoutNoDataTag": false
+        },
+        {
+          "depth": "5-15cm",
+          "statistic": "mean",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "5-15cm",
+              "statistic": "mean",
+              "valueGkg": 452,
+              "percent": 45.2,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.996,
+                  51.603666666666655
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "5-15cm",
+              "statistic": "mean",
+              "valueGkg": 411,
+              "percent": 41.1,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.996,
+                  51.603666666666655
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "5-15cm",
+              "statistic": "mean",
+              "valueGkg": 138,
+              "percent": 13.8,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.996,
+                  51.603666666666655
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 1001,
+          "sumPercent": 100.1,
+          "hasZeroWithoutNoDataTag": false
+        },
+        {
+          "depth": "5-15cm",
+          "statistic": "Q0.5",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "5-15cm",
+              "statistic": "Q0.5",
+              "valueGkg": 478,
+              "percent": 47.8,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.996,
+                  51.603666666666655
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "5-15cm",
+              "statistic": "Q0.5",
+              "valueGkg": 300,
+              "percent": 30,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.996,
+                  51.603666666666655
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "5-15cm",
+              "statistic": "Q0.5",
+              "valueGkg": 45,
+              "percent": 4.5,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.996,
+                  51.603666666666655
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 823,
+          "sumPercent": 82.3,
+          "hasZeroWithoutNoDataTag": false
+        },
+        {
+          "depth": "15-30cm",
+          "statistic": "mean",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "15-30cm",
+              "statistic": "mean",
+              "valueGkg": 461,
+              "percent": 46.1,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.996,
+                  51.603666666666655
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "15-30cm",
+              "statistic": "mean",
+              "valueGkg": 386,
+              "percent": 38.6,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.996,
+                  51.603666666666655
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "15-30cm",
+              "statistic": "mean",
+              "valueGkg": 153,
+              "percent": 15.3,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.996,
+                  51.603666666666655
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 1000,
+          "sumPercent": 100,
+          "hasZeroWithoutNoDataTag": false
+        },
+        {
+          "depth": "15-30cm",
+          "statistic": "Q0.5",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "15-30cm",
+              "statistic": "Q0.5",
+              "valueGkg": 474,
+              "percent": 47.4,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.996,
+                  51.603666666666655
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "15-30cm",
+              "statistic": "Q0.5",
+              "valueGkg": 275,
+              "percent": 27.5,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.996,
+                  51.603666666666655
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "15-30cm",
+              "statistic": "Q0.5",
+              "valueGkg": 59,
+              "percent": 5.9,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.996,
+                  51.603666666666655
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 808,
+          "sumPercent": 80.8,
+          "hasZeroWithoutNoDataTag": false
+        }
+      ]
+    },
+    {
+      "name": "Warszawa — obszar miejski",
+      "lat": 52.2297,
+      "lng": 21.0122,
+      "parcel": {
+        "status": "found",
+        "id": "146510_8.0502.1/3",
+        "parcel": "1/3",
+        "commune": "Warszawa (miasto)",
+        "county": "powiat Warszawa",
+        "voivodeship": "mazowieckie"
+      },
+      "groups": [
+        {
+          "depth": "0-5cm",
+          "statistic": "mean",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "0-5cm",
+              "statistic": "mean",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.0092,
+                  52.232366666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "0-5cm",
+              "statistic": "mean",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.0092,
+                  52.232366666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "0-5cm",
+              "statistic": "mean",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.0092,
+                  52.232366666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 0,
+          "sumPercent": 0,
+          "hasZeroWithoutNoDataTag": true
+        },
+        {
+          "depth": "0-5cm",
+          "statistic": "Q0.5",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "0-5cm",
+              "statistic": "Q0.5",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.0092,
+                  52.232366666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "0-5cm",
+              "statistic": "Q0.5",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.0092,
+                  52.232366666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "0-5cm",
+              "statistic": "Q0.5",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.0092,
+                  52.232366666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 0,
+          "sumPercent": 0,
+          "hasZeroWithoutNoDataTag": true
+        },
+        {
+          "depth": "5-15cm",
+          "statistic": "mean",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "5-15cm",
+              "statistic": "mean",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.0092,
+                  52.232366666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "5-15cm",
+              "statistic": "mean",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.0092,
+                  52.232366666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "5-15cm",
+              "statistic": "mean",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.0092,
+                  52.232366666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 0,
+          "sumPercent": 0,
+          "hasZeroWithoutNoDataTag": true
+        },
+        {
+          "depth": "5-15cm",
+          "statistic": "Q0.5",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "5-15cm",
+              "statistic": "Q0.5",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.0092,
+                  52.232366666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "5-15cm",
+              "statistic": "Q0.5",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.0092,
+                  52.232366666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "5-15cm",
+              "statistic": "Q0.5",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.0092,
+                  52.232366666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 0,
+          "sumPercent": 0,
+          "hasZeroWithoutNoDataTag": true
+        },
+        {
+          "depth": "15-30cm",
+          "statistic": "mean",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "15-30cm",
+              "statistic": "mean",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.0092,
+                  52.232366666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "15-30cm",
+              "statistic": "mean",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.0092,
+                  52.232366666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "15-30cm",
+              "statistic": "mean",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.0092,
+                  52.232366666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 0,
+          "sumPercent": 0,
+          "hasZeroWithoutNoDataTag": true
+        },
+        {
+          "depth": "15-30cm",
+          "statistic": "Q0.5",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "15-30cm",
+              "statistic": "Q0.5",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.0092,
+                  52.232366666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "15-30cm",
+              "statistic": "Q0.5",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.0092,
+                  52.232366666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "15-30cm",
+              "statistic": "Q0.5",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  21.0092,
+                  52.232366666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 0,
+          "sumPercent": 0,
+          "hasZeroWithoutNoDataTag": true
+        }
+      ]
+    },
+    {
+      "name": "Podlaskie — okolice Białegostoku",
+      "lat": 53.1,
+      "lng": 22.85,
+      "parcel": {
+        "status": "found",
+        "id": "200201_5.0019.257/1",
+        "parcel": "257/1",
+        "commune": "Choroszcz",
+        "county": "powiat białostocki",
+        "voivodeship": "podlaskie"
+      },
+      "groups": [
+        {
+          "depth": "0-5cm",
+          "statistic": "mean",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "0-5cm",
+              "statistic": "mean",
+              "valueGkg": 681,
+              "percent": 68.1,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  22.847,
+                  53.102666666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "0-5cm",
+              "statistic": "mean",
+              "valueGkg": 220,
+              "percent": 22,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  22.847,
+                  53.102666666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "0-5cm",
+              "statistic": "mean",
+              "valueGkg": 99,
+              "percent": 9.9,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  22.847,
+                  53.102666666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 1000,
+          "sumPercent": 100,
+          "hasZeroWithoutNoDataTag": false
+        },
+        {
+          "depth": "0-5cm",
+          "statistic": "Q0.5",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "0-5cm",
+              "statistic": "Q0.5",
+              "valueGkg": 734,
+              "percent": 73.4,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  22.847,
+                  53.102666666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "0-5cm",
+              "statistic": "Q0.5",
+              "valueGkg": 150,
+              "percent": 15,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  22.847,
+                  53.102666666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "0-5cm",
+              "statistic": "Q0.5",
+              "valueGkg": 56,
+              "percent": 5.6,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  22.847,
+                  53.102666666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 940,
+          "sumPercent": 94,
+          "hasZeroWithoutNoDataTag": false
+        },
+        {
+          "depth": "5-15cm",
+          "statistic": "mean",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "5-15cm",
+              "statistic": "mean",
+              "valueGkg": 693,
+              "percent": 69.3,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  22.847,
+                  53.102666666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "5-15cm",
+              "statistic": "mean",
+              "valueGkg": 224,
+              "percent": 22.4,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  22.847,
+                  53.102666666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "5-15cm",
+              "statistic": "mean",
+              "valueGkg": 83,
+              "percent": 8.3,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  22.847,
+                  53.102666666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 1000,
+          "sumPercent": 100,
+          "hasZeroWithoutNoDataTag": false
+        },
+        {
+          "depth": "5-15cm",
+          "statistic": "Q0.5",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "5-15cm",
+              "statistic": "Q0.5",
+              "valueGkg": 743,
+              "percent": 74.3,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  22.847,
+                  53.102666666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "5-15cm",
+              "statistic": "Q0.5",
+              "valueGkg": 153,
+              "percent": 15.3,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  22.847,
+                  53.102666666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "5-15cm",
+              "statistic": "Q0.5",
+              "valueGkg": 50,
+              "percent": 5,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  22.847,
+                  53.102666666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 946,
+          "sumPercent": 94.6,
+          "hasZeroWithoutNoDataTag": false
+        },
+        {
+          "depth": "15-30cm",
+          "statistic": "mean",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "15-30cm",
+              "statistic": "mean",
+              "valueGkg": 676,
+              "percent": 67.6,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  22.847,
+                  53.102666666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "15-30cm",
+              "statistic": "mean",
+              "valueGkg": 242,
+              "percent": 24.2,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  22.847,
+                  53.102666666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "15-30cm",
+              "statistic": "mean",
+              "valueGkg": 82,
+              "percent": 8.2,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  22.847,
+                  53.102666666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 1000,
+          "sumPercent": 100,
+          "hasZeroWithoutNoDataTag": false
+        },
+        {
+          "depth": "15-30cm",
+          "statistic": "Q0.5",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "15-30cm",
+              "statistic": "Q0.5",
+              "valueGkg": 721,
+              "percent": 72.1,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  22.847,
+                  53.102666666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "15-30cm",
+              "statistic": "Q0.5",
+              "valueGkg": 159,
+              "percent": 15.9,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  22.847,
+                  53.102666666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "15-30cm",
+              "statistic": "Q0.5",
+              "valueGkg": 46,
+              "percent": 4.6,
+              "valueFlag": "value",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  22.847,
+                  53.102666666666664
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 926,
+          "sumPercent": 92.6,
+          "hasZeroWithoutNoDataTag": false
+        }
+      ]
+    },
+    {
+      "name": "Opolskie — południowy zachód",
+      "lat": 50.7,
+      "lng": 17.9,
+      "parcel": {
+        "status": "found",
+        "id": "166101_1.0118.247",
+        "parcel": "247",
+        "commune": "Opole (miasto)",
+        "county": "powiat Opole",
+        "voivodeship": "opolskie"
+      },
+      "groups": [
+        {
+          "depth": "0-5cm",
+          "statistic": "mean",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "0-5cm",
+              "statistic": "mean",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  17.897,
+                  50.70266666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "0-5cm",
+              "statistic": "mean",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  17.897,
+                  50.70266666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "0-5cm",
+              "statistic": "mean",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  17.897,
+                  50.70266666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 0,
+          "sumPercent": 0,
+          "hasZeroWithoutNoDataTag": true
+        },
+        {
+          "depth": "0-5cm",
+          "statistic": "Q0.5",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "0-5cm",
+              "statistic": "Q0.5",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  17.897,
+                  50.70266666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "0-5cm",
+              "statistic": "Q0.5",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  17.897,
+                  50.70266666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "0-5cm",
+              "statistic": "Q0.5",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  17.897,
+                  50.70266666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 0,
+          "sumPercent": 0,
+          "hasZeroWithoutNoDataTag": true
+        },
+        {
+          "depth": "5-15cm",
+          "statistic": "mean",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "5-15cm",
+              "statistic": "mean",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  17.897,
+                  50.70266666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "5-15cm",
+              "statistic": "mean",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  17.897,
+                  50.70266666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "5-15cm",
+              "statistic": "mean",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  17.897,
+                  50.70266666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 0,
+          "sumPercent": 0,
+          "hasZeroWithoutNoDataTag": true
+        },
+        {
+          "depth": "5-15cm",
+          "statistic": "Q0.5",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "5-15cm",
+              "statistic": "Q0.5",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  17.897,
+                  50.70266666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "5-15cm",
+              "statistic": "Q0.5",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  17.897,
+                  50.70266666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "5-15cm",
+              "statistic": "Q0.5",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  17.897,
+                  50.70266666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 0,
+          "sumPercent": 0,
+          "hasZeroWithoutNoDataTag": true
+        },
+        {
+          "depth": "15-30cm",
+          "statistic": "mean",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "15-30cm",
+              "statistic": "mean",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  17.897,
+                  50.70266666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "15-30cm",
+              "statistic": "mean",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  17.897,
+                  50.70266666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "15-30cm",
+              "statistic": "mean",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  17.897,
+                  50.70266666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 0,
+          "sumPercent": 0,
+          "hasZeroWithoutNoDataTag": true
+        },
+        {
+          "depth": "15-30cm",
+          "statistic": "Q0.5",
+          "fractions": {
+            "sand": {
+              "property": "sand",
+              "depth": "15-30cm",
+              "statistic": "Q0.5",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  17.897,
+                  50.70266666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "silt": {
+              "property": "silt",
+              "depth": "15-30cm",
+              "statistic": "Q0.5",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  17.897,
+                  50.70266666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            },
+            "clay": {
+              "property": "clay",
+              "depth": "15-30cm",
+              "statistic": "Q0.5",
+              "valueGkg": 0,
+              "percent": 0,
+              "valueFlag": "zero-no-nodata-tag",
+              "raster": {
+                "width": 4,
+                "height": 3,
+                "scaleDegrees": [
+                  0.002000000000000076,
+                  0.0026666666666628203
+                ],
+                "selectedCellCenter": [
+                  17.897,
+                  50.70266666666666
+                ],
+                "noDataTag": null,
+                "selectedPixelIndex": [
+                  2,
+                  1
+                ]
+              }
+            }
+          },
+          "sumGkg": 0,
+          "sumPercent": 0,
+          "hasZeroWithoutNoDataTag": true
+        }
+      ]
+    }
+  ]
+}
