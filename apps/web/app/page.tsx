@@ -221,6 +221,25 @@ export default function Home() {
               ) : null}
             </section>
           )}
+          {parcel && (
+            <section className="terrain-card" aria-label="Dane o terenie i glebie">
+              <div className="terrain-card-heading">
+                <div>
+                  <span className="terrain-kicker">CHARAKTERYSTYKA DZIAŁKI</span>
+                  <h2>Teren i gleba</h2>
+                </div>
+                <span className="coming-soon">W przygotowaniu</span>
+              </div>
+              <p className="terrain-description">Planowane dane dla działki {parcel.parcel}.</p>
+              <div className="terrain-metrics">
+                <div><span>Uziarnienie gleby</span><strong>—</strong><small>brak danych</small></div>
+                <div><span>Podatność na suszę</span><strong>—</strong><small>brak danych</small></div>
+                <div><span>Pojemność wodna</span><strong>—</strong><small>brak danych</small></div>
+                <div><span>Nachylenie terenu</span><strong>—</strong><small>brak danych</small></div>
+              </div>
+              <p className="terrain-note">Wartości nie są jeszcze pobierane. Panel przygotowuje miejsce na dane glebowe i numeryczny model terenu.</p>
+            </section>
+          )}
         </div>
         <aside className="details-panel" aria-live="polite">
           <div className="panel-icon" aria-hidden="true">▧</div>

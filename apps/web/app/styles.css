@@ -35,6 +35,18 @@ h1 { margin-bottom: 5px; font: 800 29px/1.2 "Manrope", Arial, sans-serif; letter
 .weather-history strong { color: #1d6548; }
 .weather-status { display: flex; align-items: center; gap: 9px; color: #718078; font-size: 12px; }
 .weather-error { color: #973f31; font-size: 11px; line-height: 1.45; }
+.terrain-card { margin: 0 16px 18px; padding: 17px 18px; border: 1px solid #e2e9e5; border-radius: 14px; background: #fff; }
+.terrain-card-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 7px; }
+.terrain-card-heading h2 { margin: 3px 0 0; font: 700 14px "Manrope", Arial, sans-serif; }
+.terrain-kicker { color: #718078; font-size: 9px; font-weight: 800; letter-spacing: .09em; }
+.coming-soon { padding: 5px 8px; border-radius: 999px; background: #f3f5f3; color: #7c8780; font-size: 9px; font-weight: 700; }
+.terrain-description { margin: 0 0 12px; color: #718078; font-size: 10px; }
+.terrain-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.terrain-metrics > div { display: flex; min-width: 0; flex-direction: column; gap: 5px; padding: 11px 12px; border: 1px solid #e7ece8; border-radius: 10px; background: #fafcfb; }
+.terrain-metrics span { color: #58665e; font-size: 10px; font-weight: 600; }
+.terrain-metrics strong { color: #829087; font: 700 20px "Manrope", Arial, sans-serif; }
+.terrain-metrics small { color: #98a19b; font-size: 9px; }
+.terrain-note { margin: 12px 0 0; color: #849088; font-size: 10px; line-height: 1.5; }
 .details-panel { display: flex; flex-direction: column; padding: 24px 22px; }
 .panel-icon { display: grid; place-items: center; width: 37px; height: 37px; margin-bottom: 14px; border-radius: 11px; background: #e9f4ed; color: var(--green); font-size: 20px; }
 .details-panel h2 { margin-bottom: 20px; }
@@ -77,3 +89,4 @@ h1 { margin-bottom: 5px; font: 800 29px/1.2 "Manrope", Arial, sans-serif; letter
 footer { padding: 20px 4px 0; color: #88928c; font-size: 11px; }
 @media (max-width: 900px) { .app-shell { padding: 26px 22px; } .workspace { grid-template-columns: minmax(0, 1fr) 290px; } }
 @media (max-width: 700px) { .app-shell { padding: 22px 14px; } .page-header { gap: 12px; margin-bottom: 22px; } .brand-mark { width: 46px; height: 46px; } h1 { font-size: 22px; } .workspace { grid-template-columns: 1fr; } .map-frame, .map-loading { height: 52vh; min-height: 360px; } .details-panel { min-height: 270px; } .map-heading { gap: 10px; padding: 18px 16px 14px; } .map-heading h2 { font-size: 15px; } .map-heading p { font-size: 11px; } .map-hint { font-size: 10px; } }
+@media (max-width: 900px) { .terrain-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
