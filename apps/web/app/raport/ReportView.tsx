@@ -254,21 +254,32 @@ export default function ReportView({ parcelId, point, crop }: {
         </div>
       </section>
 
-      {summary && !detailed && (
+      {summary && (
         <section className="report-card report-block">
-          <h2 className="report-title">Co warto zrobić</h2>
-          <ul className="simple-advice">
-            {advice.map((item) => (
-              <li key={item.id} className={`timing-${item.timing}`}>
-                <span className="advice-icon" aria-hidden="true">{item.icon}</span>
-                <div>
-                  <span className="advice-timing">{timingLabel[item.timing]}</span>
-                  <strong>{item.title}</strong>
-                  <p>{item.short}</p>
+          <div className="report-section-heading">
+            <div>
+              <span className="weather-kicker">PLAN DZIAŁAŃ · DOBRANY DO TWOJEJ DZIAŁKI</span>
+              <h2 className="report-title">Rekomendacje – jak zatrzymać wodę</h2>
+            </div>
+            <span className="weather-source">{advice.length} {advice.length === 1 ? "porada" : advice.length < 5 ? "porady" : "porad"}</span>
+          </div>
+          <ol className="advice-list">
+            {advice.map((item, index) => (
+              <li key={item.id} className={`advice-card timing-${item.timing}`}>
+                <div className="advice-icon" aria-hidden="true">{item.icon}</div>
+                <div className="advice-body">
+                  <div className="advice-meta">
+                    <span className="advice-step">Krok {index + 1}</span>
+                    <span className="advice-timing">{timingLabel[item.timing]}</span>
+                    <span className="advice-category">{item.category}</span>
+                  </div>
+                  <h3>{item.title}</h3>
+                  <p>{item.text}</p>
+                  <p className="advice-why"><strong>Dlaczego?</strong> {item.why}</p>
                 </div>
               </li>
             ))}
-          </ul>
+          </ol>
         </section>
       )}
 
@@ -283,45 +294,17 @@ export default function ReportView({ parcelId, point, crop }: {
       )}
 
       {detailed && summary && (
-        <>
-          <section className="report-card report-block">
-            <div className="report-section-heading">
-              <div>
-                <span className="weather-kicker">PLAN DZIAŁAŃ · DOBRANY DO TWOJEJ DZIAŁKI</span>
-                <h2 className="report-title">Rekomendacje – jak zatrzymać wodę</h2>
-              </div>
-              <span className="weather-source">{advice.length} {advice.length === 1 ? "porada" : advice.length < 5 ? "porady" : "porad"}</span>
-            </div>
-            <ol className="advice-list">
-              {advice.map((item, index) => (
-                <li key={item.id} className={`advice-card timing-${item.timing}`}>
-                  <div className="advice-icon" aria-hidden="true">{item.icon}</div>
-                  <div className="advice-body">
-                    <div className="advice-meta">
-                      <span className="advice-step">Krok {index + 1}</span>
-                      <span className="advice-timing">{timingLabel[item.timing]}</span>
-                      <span className="advice-category">{item.category}</span>
-                    </div>
-                    <h3>{item.title}</h3>
-                    <p>{item.text}</p>
-                    <p className="advice-why"><strong>Dlaczego?</strong> {item.why}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </section>
-          <section className="report-card report-block">
-            <h2 className="report-title">Najważniejsze wnioski z danych</h2>
-            <ul className="finding-list finding-grid">
-              {summary.findings.map((finding) => (
-                <li key={finding.title} className={`finding level-${finding.level}`}>
-                  <strong>{finding.title}</strong>
-                  <p>{finding.text}</p>
-                </li>
-              ))}
-            </ul>
-          </section>
-        </>
+        <section className="report-card report-block">
+          <h2 className="report-title">Najważniejsze wnioski z danych</h2>
+          <ul className="finding-list finding-grid">
+            {summary.findings.map((finding) => (
+              <li key={finding.title} className={`finding level-${finding.level}`}>
+                <strong>{finding.title}</strong>
+                <p>{finding.text}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {detailed && (<>

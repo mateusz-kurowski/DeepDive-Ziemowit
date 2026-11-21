@@ -8,7 +8,6 @@ export type Advice = {
   icon: string;
   category: "Zatrzymaj wodę" | "Gleba" | "Uprawa" | "Bezpieczeństwo";
   title: string;
-  short: string;
   text: string;
   why: string;
   timing: AdviceTiming;
@@ -53,9 +52,7 @@ export function buildAdvice({ kind, weather, hydro, satellite, crop, month }: Ad
       id: "flood",
       icon: "🌊",
       category: "Bezpieczeństwo",
-      title: "Przygotuj pole na wysoką wodę",
-      short: "Udrożnij rowy i przenieś sprzęt wyżej.",
-      text: "Udrożnij przepusty i rowy na granicy pola, a sprzęt, nawozy i środki ochrony roślin przenieś w wyżej położone miejsce.",
+      title: "Przygotuj pole na wysoką wodę",      text: "Udrożnij przepusty i rowy na granicy pola, a sprzęt, nawozy i środki ochrony roślin przenieś w wyżej położone miejsce.",
       why: `Wodowskaz ${alert.name}${alert.river ? ` na rzece ${alert.river}` : ""} pokazuje ${alert.waterLevelCm} cm${alert.warningLevelCm !== null ? ` przy stanie ostrzegawczym ${alert.warningLevelCm} cm` : ""}.`,
       timing: "now",
       priority: 1,
@@ -67,9 +64,7 @@ export function buildAdvice({ kind, weather, hydro, satellite, crop, month }: Ad
       id: "gates-close",
       icon: "🚧",
       category: "Zatrzymaj wodę",
-      title: "Zamknij zastawki na rowach",
-      short: "Woda zostanie przy polu, zamiast odpłynąć.",
-      text: "Podnieś lub zamknij zastawki, żeby woda nie uciekała rowami z pola. Każdy centymetr wody w rowie to zapas dla gleby obok.",
+      title: "Zamknij zastawki na rowach",      text: "Podnieś lub zamknij zastawki, żeby woda nie uciekała rowami z pola. Każdy centymetr wody w rowie to zapas dla gleby obok.",
       why: balance !== null && balance < 0
         ? `W ostatnich 30 dniach wyparowało o ${mm(balance)} więcej wody, niż spadło z deszczem.`
         : "Wskaźniki pokazują, że wody na działce ubywa.",
@@ -81,9 +76,7 @@ export function buildAdvice({ kind, weather, hydro, satellite, crop, month }: Ad
       id: "gates-hold",
       icon: "🚧",
       category: "Zatrzymaj wodę",
-      title: "Zatrzymaj nadwyżkę wody na polu",
-      short: "Niech woda wsiąka w glebę, a nie spływa rowami.",
-      text: "Podnieś zastawki, żeby woda wsiąkała w glebę zamiast odpływać rowami. Ta woda przyda się w suchym okresie.",
+      title: "Zatrzymaj nadwyżkę wody na polu",      text: "Podnieś zastawki, żeby woda wsiąkała w glebę zamiast odpływać rowami. Ta woda przyda się w suchym okresie.",
       why: balance !== null && balance > 0
         ? `W ostatnich 30 dniach spadło o ${mm(balance)} więcej wody, niż wyparowało${rootZone !== null ? `, a wilgotność gleby wynosi ${rootZone}%` : ""}.`
         : `Gleba jest mokra${rootZone !== null ? ` (${rootZone}% wilgotności)` : ""}.`,
@@ -97,9 +90,7 @@ export function buildAdvice({ kind, weather, hydro, satellite, crop, month }: Ad
       id: "tillage",
       icon: "🚜",
       category: "Gleba",
-      title: "Ogranicz uprawę gleby",
-      short: "Bez orki gleba wolniej wysycha.",
-      text: "Zrezygnuj z orki i głębokiego spulchniania – odwracanie gleby przyspiesza jej wysychanie. Zostaw resztki roślin na powierzchni jako ochronę.",
+      title: "Ogranicz uprawę gleby",      text: "Zrezygnuj z orki i głębokiego spulchniania – odwracanie gleby przyspiesza jej wysychanie. Zostaw resztki roślin na powierzchni jako ochronę.",
       why: `Wilgotność w strefie korzeni wynosi tylko ${rootZone ?? "—"}% – to poziom suchej gleby.`,
       timing: "week",
       priority: 3,
@@ -111,9 +102,7 @@ export function buildAdvice({ kind, weather, hydro, satellite, crop, month }: Ad
       id: "irrigation",
       icon: "💦",
       category: "Uprawa",
-      title: "Nawadniaj w chłodnych godzinach",
-      short: "Rano i wieczorem mniej wody wyparuje.",
-      text: "Jeśli masz możliwość nawadniania, rób to wcześnie rano lub wieczorem – w ciągu dnia duża część wody od razu wyparuje.",
+      title: "Nawadniaj w chłodnych godzinach",      text: "Jeśli masz możliwość nawadniania, rób to wcześnie rano lub wieczorem – w ciągu dnia duża część wody od razu wyparuje.",
       why: `Przez ${drySpell} dni z rzędu nie spadło więcej niż 1 mm deszczu.`,
       timing: "now",
       priority: 2,
@@ -125,9 +114,7 @@ export function buildAdvice({ kind, weather, hydro, satellite, crop, month }: Ad
       id: "forecast-dry",
       icon: "☀️",
       category: "Zatrzymaj wodę",
-      title: "Nie czekaj na deszcz",
-      short: "W prognozie mało opadów – działaj już teraz.",
-      text: "W najbliższych dniach opadów będzie mało. Działania zatrzymujące wodę na polu warto zrobić już teraz.",
+      title: "Nie czekaj na deszcz",      text: "W najbliższych dniach opadów będzie mało. Działania zatrzymujące wodę na polu warto zrobić już teraz.",
       why: `Prognoza na ${forecast.days} dni: ok. ${mm(forecast.precipitationMm ?? 0)} deszczu przy ${mm(forecast.evapotranspirationMm ?? 0)} parowania.`,
       timing: "now",
       priority: 3,
@@ -139,9 +126,7 @@ export function buildAdvice({ kind, weather, hydro, satellite, crop, month }: Ad
       id: "heavy-machinery",
       icon: "🛞",
       category: "Gleba",
-      title: "Odłóż wjazd ciężkim sprzętem",
-      short: "Mokra gleba ugniata się pod kołami i gorzej chłonie wodę.",
-      text: "Mokra gleba łatwo się ugniata. Ugnieciona ziemia gorzej przyjmuje wodę i może utrudniać uprawę przez kolejne sezony.",
+      title: "Odłóż wjazd ciężkim sprzętem",      text: "Mokra gleba łatwo się ugniata. Ugnieciona ziemia gorzej przyjmuje wodę i może utrudniać uprawę przez kolejne sezony.",
       why: forecast?.balanceMm != null && forecast.balanceMm > 5
         ? `Gleba jest już mokra, a w prognozie jest jeszcze ok. ${mm(forecast.precipitationMm ?? 0)} deszczu.`
         : `Wilgotność gleby wynosi ${rootZone ?? "—"}% – to poziom mokrej gleby.`,
@@ -158,9 +143,7 @@ export function buildAdvice({ kind, weather, hydro, satellite, crop, month }: Ad
         id: "field-check",
         icon: "🔍",
         category: "Uprawa",
-        title: "Obejrzyj rośliny na polu",
-        short: "Satelita widzi słabszą zieleń – sprawdź, dlaczego.",
-        text: "Sprawdź, czy słabsza zieleń wynika z fazy rozwoju, choroby, szkodników czy braku wody – samo zdjęcie z satelity tego nie rozstrzyga.",
+        title: "Obejrzyj rośliny na polu",        text: "Sprawdź, czy słabsza zieleń wynika z fazy rozwoju, choroby, szkodników czy braku wody – samo zdjęcie z satelity tego nie rozstrzyga.",
         why: dropped && satellite.historicalNdvi !== null
           ? `Zieleń roślin z satelity (NDVI) spadła z ${satellite.historicalNdvi.toFixed(2)} rok temu do ${satellite.ndvi.toFixed(2)}.`
           : `Zieleń roślin z satelity (NDVI) wynosi ${satellite.ndvi.toFixed(2)} – to słabe pokrycie.`,
@@ -180,9 +163,7 @@ export function buildAdvice({ kind, weather, hydro, satellite, crop, month }: Ad
       id: "cover-crop",
       icon: "🌱",
       category: "Gleba",
-      title: "Zostaw okrywę roślinną na zimę",
-      short: "Rośliny na polu zatrzymają wodę na wiosnę.",
-      text: "Międzyplon, poplon lub ściernisko pomagają zatrzymać wodę z deszczu i śniegu i chronią glebę przed spływem.",
+      title: "Zostaw okrywę roślinną na zimę",      text: "Międzyplon, poplon lub ściernisko pomagają zatrzymać wodę z deszczu i śniegu i chronią glebę przed spływem.",
       why: "Jesienią i zimą gleba gromadzi zapas wody na wiosnę – okrywa roślinna pomaga go utrzymać.",
       timing: "season",
       priority: 5,
@@ -193,9 +174,7 @@ export function buildAdvice({ kind, weather, hydro, satellite, crop, month }: Ad
     id: "gates-ready",
     icon: "🔧",
     category: "Zatrzymaj wodę",
-    title: "Sprawdź zastawki i rowy",
-    short: "Sprawne zastawki pozwolą szybko zareagować.",
-    text: "Upewnij się, że zastawki działają, a rowy nie są zarośnięte. Dzięki temu w razie potrzeby szybko zatrzymasz albo odprowadzisz wodę.",
+    title: "Sprawdź zastawki i rowy",    text: "Upewnij się, że zastawki działają, a rowy nie są zarośnięte. Dzięki temu w razie potrzeby szybko zatrzymasz albo odprowadzisz wodę.",
     why: "Sprawne urządzenia na rowach to najszybszy sposób reagowania na suszę i nadmiar wody.",
     timing: "season",
     priority: 6,
@@ -205,9 +184,7 @@ export function buildAdvice({ kind, weather, hydro, satellite, crop, month }: Ad
     id: "humus",
     icon: "🌿",
     category: "Gleba",
-    title: "Dbaj o próchnicę w glebie",
-    short: "Obornik i kompost pomagają glebie trzymać wodę.",
-    text: "Obornik, kompost i międzyplony zwiększają ilość próchnicy, a gleba bogata w próchnicę magazynuje więcej wody.",
+    title: "Dbaj o próchnicę w glebie",    text: "Obornik, kompost i międzyplony zwiększają ilość próchnicy, a gleba bogata w próchnicę magazynuje więcej wody.",
     why: "To długofalowy sposób na większy zapas wody w glebie niezależnie od pogody.",
     timing: "season",
     priority: 7,
@@ -227,18 +204,14 @@ function cropMulchAdvice(crop: string): Advice | null {
       return {
         ...base,
         icon: "🥔",
-        title: "Okryj glebę między rzędami",
-        short: "Ściółka utrzyma wilgoć przy korzeniach.",
-        text: "Słoma lub inna ściółka między rzędami ogranicza parowanie i utrzymuje wilgoć przy korzeniach.",
+        title: "Okryj glebę między rzędami",        text: "Słoma lub inna ściółka między rzędami ogranicza parowanie i utrzymuje wilgoć przy korzeniach.",
         why: "Ziemniaki i warzywa szczególnie źle znoszą brak wody w okresie wzrostu bulw i owoców.",
       };
     case "owoce":
       return {
         ...base,
         icon: "🍎",
-        title: "Wyściółkuj pasy pod drzewami",
-        short: "Ściółka chroni korzenie przed przesuszeniem.",
-        text: "Kora, zrębki lub skoszona trawa pod drzewami zmniejszają parowanie i chronią korzenie przed przesuszeniem.",
+        title: "Wyściółkuj pasy pod drzewami",        text: "Kora, zrębki lub skoszona trawa pod drzewami zmniejszają parowanie i chronią korzenie przed przesuszeniem.",
         why: "Drzewa owocowe potrzebują stałej wilgoci, a odkryta gleba pod koronami szybko wysycha.",
       };
     case "zboza":
@@ -248,9 +221,7 @@ function cropMulchAdvice(crop: string): Advice | null {
       return {
         ...base,
         icon: "🌾",
-        title: "Zostaw resztki roślin na polu",
-        short: "Resztki roślin ograniczą parowanie z gleby.",
-        text: "Słoma i resztki pożniwne zostawione na powierzchni działają jak ściółka i zmniejszają parowanie z odkrytej gleby.",
+        title: "Zostaw resztki roślin na polu",        text: "Słoma i resztki pożniwne zostawione na powierzchni działają jak ściółka i zmniejszają parowanie z odkrytej gleby.",
         why: "Odkryta gleba po zbiorze traci wodę najszybciej, zwłaszcza w ciepłe i wietrzne dni.",
       };
     default:
