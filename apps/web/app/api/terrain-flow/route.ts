@@ -10,7 +10,9 @@ type Geometry = { type: "Polygon"; coordinates: Polygon } | { type: "MultiPolygo
 
 const HEIGHT_SERVICE = "https://services.gugik.gov.pl/nmt/";
 const BUFFER_M = 50;
-const TARGET_MAX_SAMPLES = 2500;
+const TARGET_MAX_SAMPLES = 6000;
+const MIN_SAMPLE_SPACING_M = 2;
+const GRID_CACHE_VERSION = "grid-6000-2m-v2";
 const LIST_BATCH_SIZE = 200;
 const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 const cache = new Map<string, { expiresAt: number; value: Record<string, unknown> }>();
@@ -365,7 +367,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Wskaż działkę w granicach Polski." }, { status: 400 });
   }
   if (!geometry || !id) return NextResponse.json({ error: "Brakuje granic działki do analizy spływu." }, { status: 400 });
-  const cached = cache.get(id);
+  const cacheKey = `${GRID_CACHE_VERSION}:${id}`;
+  const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return NextResponse.json(cached.value);
 
   try {
@@ -381,7 +384,7 @@ export async function POST(request: Request) {
     const widthM = maxVertexX - minVertexX + 2 * BUFFER_M;
     const heightM = maxVertexY - minVertexY + 2 * BUFFER_M;
     const rawStep = Math.sqrt((widthM * heightM) / TARGET_MAX_SAMPLES);
-    const step = Math.max(5, Math.ceil(rawStep / 5) * 5);
+    const step = Math.max(MIN_SAMPLE_SPACING_M, Math.ceil(rawStep / MIN_SAMPLE_SPACING_M) * MIN_SAMPLE_SPACING_M);
     const minX = Math.floor((minVertexX - BUFFER_M) / step) * step;
     const maxX = Math.ceil((maxVertexX + BUFFER_M) / step) * step;
     const minY = Math.floor((minVertexY - BUFFER_M) / step) * step;
@@ -421,7 +424,7 @@ export async function POST(request: Request) {
         "Zagłębienia są wskazaniami topograficznymi przy progu wypełnienia 0,25 m, a nie prognozą objętości stojącej wody.",
       ],
     };
-    cache.set(id, { expiresAt: Date.now() + CACHE_TTL_MS, value: result });
+    cache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL_MS, value: result });
     if (cache.size > 500) {
       for (const [key, entry] of cache) if (entry.expiresAt <= Date.now()) cache.delete(key);
       if (cache.size > 500) cache.delete(cache.keys().next().value!);
