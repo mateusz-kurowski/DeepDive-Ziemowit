@@ -58,6 +58,10 @@ Rośliny silnie odbijają promieniowanie bliskiej podczerwieni i pochłaniają
 czerwień, więc wysoka różnica między tymi pasmami oznacza zazwyczaj intensywne
 zielone pokrycie roślin. Sentinel-2 dane z Earth Search ma rozdzielczość 10 m
 Dla pasm B04 i B08 Earth Search udostępnia dane Sentinel-2 o rozdzielczości 10 m.
+Przed agregacją aplikacja odrzuca klasy maski SCL oznaczające cień chmury,
+chmurę średnią, chmurę wysoką i cirrusy. Dzięki temu „pokrycie działki”
+opisuje udział pikseli z użytecznymi danymi, a nie tylko liczbę pikseli
+wybranych geometrycznie.
 
 Surową wartość piksela przekształcamy zgodnie z metadanymi Earth Search:
 

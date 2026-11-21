@@ -103,7 +103,12 @@ async function searchScenes(bbox: [number, number, number, number], start: strin
   });
   if (!response.ok) throw new Error("Katalog Sentinel-2 nie odpowiada.");
   const payload = await response.json() as { features?: StacFeature[] };
-  return payload.features ?? [];
+  return (payload.features ?? []).sort((left, right) => {
+    const leftCloud = left.properties["eo:cloud_cover"] ?? 100;
+    const rightCloud = right.properties["eo:cloud_cover"] ?? 100;
+    if (leftCloud !== rightCloud) return leftCloud - rightCloud;
+    return (right.properties.datetime ?? "").localeCompare(left.properties.datetime ?? "");
+  });
 }
 
 async function calculateNdvi(
@@ -126,7 +131,6 @@ async function calculateNdvi(
   const nirImage = await nirTiff.getImage();
   const origin = redImage.getOrigin();
   const resolution = redImage.getResolution();
-
   const transformer = proj4(
     "EPSG:4326",
     epsg === 32734 || epsg === 32735
@@ -135,6 +139,36 @@ async function calculateNdvi(
   );
   const [minXNative, minYNatY] = transformer.forward([bbox[0], bbox[1]]) as number[];
   const [maxXNative, maxYNatY] = transformer.forward([bbox[2], bbox[3]]) as number[];
+  const sclAsset = item.assets.scl;
+  let sclValues: ArrayLike<number> | null = null;
+  let sclOrigin: number[] | null = null;
+  let sclResolution: number[] | null = null;
+  let sclLeft = 0;
+  let sclTop = 0;
+  let sclWidth = 0;
+  if (sclAsset?.href) {
+    try {
+      const sclTiff = await fromUrl(sclAsset.href);
+      const sclImage = await sclTiff.getImage();
+      sclOrigin = sclImage.getOrigin();
+      sclResolution = sclImage.getResolution();
+      const sclNativeLeft = Math.max(0, Math.floor((Math.min(minXNative, maxXNative) - sclOrigin[0]) / sclResolution[0]));
+      const sclNativeRight = Math.min(sclImage.getWidth(), Math.ceil((Math.max(minXNative, maxXNative) - sclOrigin[0]) / sclResolution[0]));
+      const sclNativeTop = Math.max(0, Math.floor((sclOrigin[1] - Math.max(minYNatY, maxYNatY)) / -sclResolution[1]));
+      const sclNativeBottom = Math.min(sclImage.getHeight(), Math.ceil((sclOrigin[1] - Math.min(minYNatY, maxYNatY)) / -sclResolution[1]));
+      sclLeft = sclNativeLeft;
+      sclTop = sclNativeTop;
+      sclWidth = sclNativeRight - sclNativeLeft;
+      const raster = await sclImage.readRasters({
+        window: [sclNativeLeft, sclNativeTop, sclNativeRight, sclNativeBottom],
+        samples: [0],
+        interleave: false,
+      }) as unknown as Array<ArrayLike<number>>;
+      sclValues = raster[0];
+    } catch {
+      sclValues = null;
+    }
+  }
 
   const pixelXSize = resolution[0];
   const pixelYSize = resolution[1];
@@ -166,6 +200,13 @@ async function calculateNdvi(
       if (!pointInGeometry(lng, lat, geometry)) continue;
 
       parcelPixels += 1;
+      if (sclValues && sclOrigin && sclResolution) {
+        const sclX = Math.floor((nativeX - sclOrigin[0]) / sclResolution[0]);
+        const sclY = Math.floor((sclOrigin[1] - nativeY) / -sclResolution[1]);
+        const sclIndex = (sclY - sclTop) * sclWidth + (sclX - sclLeft);
+        const sclClass = sclValues[sclIndex];
+        if (sclClass === 3 || sclClass === 8 || sclClass === 9 || sclClass === 10) continue;
+      }
       const index = (y - top) * (right - left) + (x - left);
       const redRaw = redValues[index];
       const nirRaw = nirValues[index];
