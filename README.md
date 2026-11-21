@@ -43,8 +43,13 @@ Gdy dostawca archiwum zwróci limit lub awarię, moduł wyświetla jawny status
 
 Dane satelitarne pobiera endpoint `POST /api/satellite`. Po wskazaniu działki
 aplikacja wyszukuje w katalogu Earth Search obserwacje Sentinel-2 L2A z ostatnich
-90 dni, wybierając scenę o chmurach poniżej 20% i wyliczając wynik tylko dla
-pikseli znajdujących się wewnątrz granicy działki.
+90 dni. Najpierw odrzuca sceny z większym globalnym udziałem chmur niż 20%, a
+następnie ocenia maksymalnie 20 kandydatów na podstawie rzeczywistej jakości
+pikseli wewnątrz granicy działki. Wynik wybiera scenę z największym udziałem
+użytecznych pikseli działki, potem o niższym globalnym zachmurzeniu i w końcu
+najnowszą obserwację. Analogiczny wybór wykonywany jest osobno dla okresu
+z poprzedniego roku. W każdym przypadku wynik liczy tylko dla pikseli
+znajdujących się wewnątrz granicy działki.
 
 #### Z czego odczytywany jest NDVI
 
@@ -56,8 +61,8 @@ biomasy roślin. Odczytywany jest z dwóch pasm obserwacji Sentinel-2:
 
 Rośliny silnie odbijają promieniowanie bliskiej podczerwieni i pochłaniają
 czerwień, więc wysoka różnica między tymi pasmami oznacza zazwyczaj intensywne
-zielone pokrycie roślin. Sentinel-2 dane z Earth Search ma rozdzielczość 10 m
-Dla pasm B04 i B08 Earth Search udostępnia dane Sentinel-2 o rozdzielczości 10 m.
+zielone pokrycie roślin. Dla pasm B04 i B08 Earth Search udostępnia dane
+Sentinel-2 o rozdzielczości 10 m.
 Przed agregacją aplikacja odrzuca klasy maski SCL oznaczające cień chmury,
 chmurę średnią, chmurę wysoką i cirrusy. Dzięki temu „pokrycie działki”
 opisuje udział pikseli z użytecznymi danymi, a nie tylko liczbę pikseli

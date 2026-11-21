@@ -97,7 +97,7 @@ async function searchScenes(bbox: [number, number, number, number], start: strin
       datetime: `${start}T00:00:00Z/${end}T23:59:59Z`,
       query: { "eo:cloud_cover": { "lt": 20 } },
       sortby: [{ field: "properties.datetime", direction: "desc" }],
-      limit: 10,
+      limit: 20,
     }),
     cache: "no-store",
   });
@@ -299,6 +299,37 @@ async function createParcelImage(
   }
 }
 
+async function selectBestScene(
+  scenes: StacFeature[],
+  geometry: Geometry | null,
+  bbox: [number, number, number, number],
+): Promise<{
+  item: StacFeature | null;
+  metrics: { ndvi: number | null; validPixelPercent: number | null; resolutionMeters: number | null } | null;
+}> {
+  if (scenes.length === 0) return { item: null, metrics: null };
+
+  const evaluated = await Promise.all(scenes.map(async (item) => ({
+    item,
+    metrics: await calculateNdvi(item, geometry, bbox),
+  })));
+
+  evaluated.sort((left, right) => {
+    const leftCoverage = left.metrics.validPixelPercent ?? -1;
+    const rightCoverage = right.metrics.validPixelPercent ?? -1;
+    if (leftCoverage !== rightCoverage) return rightCoverage - leftCoverage;
+
+    const leftCloud = left.item.properties["eo:cloud_cover"] ?? 100;
+    const rightCloud = right.item.properties["eo:cloud_cover"] ?? 100;
+    if (leftCloud !== rightCloud) return leftCloud - rightCloud;
+
+    return (right.item.properties.datetime ?? "").localeCompare(left.item.properties.datetime ?? "");
+  });
+
+  const best = evaluated[0];
+  return best.metrics.ndvi === null ? { item: null, metrics: null } : best;
+}
+
 function interpret(ndvi: number | null, difference: number | null, crop: string, weatherAvailable: boolean): string {
   if (ndvi === null) return "Nie udało się odczytać wartości roślinności z dostępnej obserwacji.";
   const cropNames: Record<string, string> = {
@@ -369,8 +400,11 @@ export async function POST(request: Request) {
       ),
     ]);
 
-    const currentItem = currentScenes[0];
-    if (!currentItem) {
+    const currentSelection = await selectBestScene(currentScenes, geometry, bbox);
+    const historicalSelection = await selectBestScene(historicalScenes, geometry, bbox);
+    const currentItem = currentSelection.item;
+    const current = currentSelection.metrics;
+    if (!currentItem || !current) {
       const unavailable: SatelliteResult = {
         status: "unavailable",
         provider: "Earth Search",
@@ -393,9 +427,8 @@ export async function POST(request: Request) {
       return NextResponse.json(unavailable);
     }
 
-    const current = await calculateNdvi(currentItem, geometry, bbox);
-    const historicalItem = historicalScenes[0];
-    const historical = historicalItem ? await calculateNdvi(historicalItem, geometry, bbox) : null;
+    const historicalItem = historicalSelection.item;
+    const historical = historicalSelection.metrics;
     const difference = current.ndvi !== null && historical !== null && historical.ndvi !== null
       ? Number((current.ndvi - historical.ndvi).toFixed(3))
       : null;
