@@ -3,6 +3,20 @@ import type { Geometry } from "geojson";
 
 export const runtime = "nodejs";
 
+const OUTSIDE_POLAND = "Ten punkt leży poza granicami Polski. Wybierz działkę w granicach Polski.";
+
+async function isInPoland(lat: number, lng: number, signal: AbortSignal): Promise<boolean | null> {
+  const query = new URLSearchParams({ request: "GetVoivodeshipByXY", xy: `${lng},${lat},4326`, result: "teryt" });
+  try {
+    const response = await fetch(`https://uldk.gugik.gov.pl/?${query}`, { signal, headers: { Accept: "text/plain" }, cache: "no-store" });
+    if (!response.ok) return null;
+    const status = (await response.text()).trim().split(/\r?\n/, 1)[0];
+    return status === "0" ? true : status.startsWith("-1") ? false : null;
+  } catch {
+    return null;
+  }
+}
+
 function parseWktGeometry(wkt: string): Geometry | null {
   const normalizedWkt = wkt.trim().replace(/^SRID=\d+;/i, "");
   const match = /^(POLYGON|MULTIPOLYGON)\s*\(([\s\S]*)\)$/i.exec(normalizedWkt);
@@ -138,8 +152,11 @@ export async function POST(request: Request) {
 
   const lat = Number(body.lat);
   const lng = Number(body.lng);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < 49 || lat > 55 || lng < 14 || lng > 24.5) {
-    return NextResponse.json({ error: "Kliknij punkt w granicach Polski." }, { status: 400 });
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return NextResponse.json({ error: "Niepoprawne współrzędne punktu." }, { status: 400 });
+  }
+  if (lat < 49 || lat > 55 || lng < 14 || lng > 24.5) {
+    return NextResponse.json({ error: OUTSIDE_POLAND, code: "outside-poland" }, { status: 422 });
   }
 
   const query = new URLSearchParams({
@@ -162,12 +179,15 @@ export async function POST(request: Request) {
     const text = await response.text();
     const [status, row = ""] = text.trim().split(/\r?\n/, 2);
     if (status !== "0" || !row) {
+      if ((await isInPoland(lat, lng, controller.signal)) === false) {
+        return NextResponse.json({ error: OUTSIDE_POLAND, code: "outside-poland" }, { status: 422 });
+      }
       return NextResponse.json({ error: "Nie znaleziono działki w tym miejscu. Spróbuj kliknąć wewnątrz innej działki." }, { status: 404 });
     }
 
     const parcel = parseParcelRow(row);
     if (!parcel) {
-      return NextResponse.json({ error: "W tym miejscu nie znaleziono działki w granicach Polski." }, { status: 404 });
+      return NextResponse.json({ error: "Usługa GUGiK zwróciła niepełne dane działki. Kliknij ponownie za chwilę." }, { status: 502 });
     }
     return NextResponse.json({ ...parcel, lat, lng });
   } catch (error) {

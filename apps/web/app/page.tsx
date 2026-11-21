@@ -84,6 +84,7 @@ type DroughtResult = {
 export default function Home() {
   const [parcel, setParcel] = useState<ParcelResult | null>(null);
   const [error, setError] = useState("");
+  const [outsidePoland, setOutsidePoland] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [searchText, setSearchText] = useState("");
   const [candidates, setCandidates] = useState<ParcelResult[]>([]);
@@ -295,6 +296,7 @@ export default function Home() {
     requestRef.current = controller;
     setLoading(true);
     setError("");
+    setOutsidePoland(false);
     setSearchError("");
     setCandidates([]);
     setParcel(null);
@@ -318,6 +320,7 @@ export default function Home() {
         signal: controller.signal,
       });
       const result = await response.json();
+      if (result.code === "outside-poland") setOutsidePoland(true);
       if (!response.ok) throw new Error(result.error ?? "Nie udało się znaleźć działki.");
       selectParcel(result as ParcelResult);
     } catch (reason) {
@@ -658,7 +661,7 @@ export default function Home() {
           {loading ? (
             <div className="status-message"><span className="spinner" /> Sprawdzam działkę…</div>
           ) : error ? (
-            <div className="error-message" role="alert"><strong>Nie udało się wybrać działki</strong><p>{error}</p></div>
+            <div className="error-message" role="alert"><strong>{outsidePoland ? "Punkt poza granicami Polski" : "Nie udało się wybrać działki"}</strong><p>{error}</p></div>
           ) : candidates.length > 0 ? (
             <div className="empty-state"><p>Wybierz działkę z listy powyżej, aby wyświetlić jej granice na mapie.</p></div>
           ) : parcel ? (
