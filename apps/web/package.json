@@ -1,0 +1,20 @@
+{
+  "name": "web",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "npm run build && next start"
+  },
+  "dependencies": {
+    "next": "16.4.6",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.30",
+    "@types/react": "19.1.6",
+    "@types/react-dom": "19.1.6",
+    "typescript": "5.8.3"
+  }
+}
