@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import ReportView from "./ReportView";
-import "../styles.css";
-
 export const metadata: Metadata = {
   title: "Raport wodny działki – Zatrzymaj wodę, chroń plony",
 };
