@@ -21,6 +21,7 @@ type DroughtResult = {
   source: "Susza:katgl_landuse2024";
   layerDate: "2024";
   category: DroughtCategory | null;
+  previewUrl: string | null;
   crop: string;
   precipitation30DaysMm: number | null;
   cropRainfallMinimumMm30Days: number;
@@ -92,7 +93,7 @@ async function getSoilCategory(
   lat: number,
   lng: number,
   geometry: Geometry | null,
-): Promise<DroughtCategory | null> {
+): Promise<{ category: DroughtCategory | null; previewUrl: string | null }> {
   const [centerX, centerY] = proj4("EPSG:4326", "EPSG:2180", [lng, lat]) as number[];
   const projectedRings: number[][][] = [];
   if (geometry?.type === "Polygon") {
@@ -145,6 +146,7 @@ async function getSoilCategory(
     .toBuffer({ resolveWithObject: true });
 
   const counts = new Map<number, number>();
+  const rgba = new Uint8Array(width * height * 4);
   const pixelWidth = (maxX - minX) / width;
   const pixelHeight = (maxY - minY) / height;
   for (let y = 0; y < height; y += 1) {
@@ -171,7 +173,28 @@ async function getSoilCategory(
   }
 
   const dominantCode = [...counts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0];
-  return dominantCode ? categoryMap[dominantCode] : null;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const pixelIndex = (y * width + x) * 4;
+      const sourceIndex = pixelIndex;
+      const nativeX = minX + (x + 0.5) * pixelWidth;
+      const nativeY = maxY - (y + 0.5) * pixelHeight;
+      const [sampleLng, sampleLat] = proj4("EPSG:2180", "EPSG:4326", [nativeX, nativeY]) as number[];
+      const inside = pointInGeometry(sampleLng, sampleLat, geometry);
+      rgba[pixelIndex] = image.data[sourceIndex];
+      rgba[pixelIndex + 1] = image.data[sourceIndex + 1];
+      rgba[pixelIndex + 2] = image.data[sourceIndex + 2];
+      rgba[pixelIndex + 3] = inside && image.data[sourceIndex + 3] >= 128 ? 255 : 0;
+    }
+  }
+  const png = await sharp(Buffer.from(rgba), {
+    raw: { width, height, channels: 4 },
+  }).resize({ width: 220, height: 150, fit: "inside", withoutEnlargement: true }).png().toBuffer();
+
+  return {
+    category: dominantCode ? categoryMap[dominantCode] : null,
+    previewUrl: `data:image/png;base64,${png.toString("base64")}`,
+  };
 }
 
 function calculateRisk(
@@ -222,7 +245,8 @@ export async function POST(request: Request) {
   if (cached && cached.expiresAt > Date.now()) return NextResponse.json(cached.value);
 
   try {
-    const category = await getSoilCategory(lat, lng, geometry);
+    const soilData = await getSoilCategory(lat, lng, geometry);
+    const category = soilData.category;
     const deficit = precipitation === null ? null : Number(Math.max(0, minimum - precipitation).toFixed(1));
     const currentRisk = calculateRisk(category, precipitation, minimum);
     const cropName = cropLabels[crop] ?? "wybraną uprawę";
@@ -244,6 +268,7 @@ export async function POST(request: Request) {
       source: "Susza:katgl_landuse2024",
       layerDate: "2024",
       category,
+      previewUrl: soilData.previewUrl,
       crop,
       precipitation30DaysMm: precipitation,
       cropRainfallMinimumMm30Days: minimum,
@@ -265,6 +290,7 @@ export async function POST(request: Request) {
       source: "Susza:katgl_landuse2024",
       layerDate: "2024",
       category: null,
+      previewUrl: null,
       crop,
       precipitation30DaysMm: precipitation,
       cropRainfallMinimumMm30Days: minimum,

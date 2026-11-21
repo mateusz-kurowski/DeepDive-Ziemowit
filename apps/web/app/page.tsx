@@ -55,6 +55,7 @@ type DroughtResult = {
     name: string;
     susceptibility: string;
   } | null;
+  previewUrl: string | null;
   precipitation30DaysMm: number | null;
   precipitationDeficitMm: number | null;
   currentRisk: "niski" | "umiarkowany" | "wysoki" | "bardzo wysoki" | "brak danych";
@@ -390,14 +391,21 @@ export default function Home() {
                   <>
                     <div className="drought-metrics">
                       <div>
-                        <span className="drought-value">{drought.category.susceptibility}</span>
+                        <span className={`drought-value drought-category-${drought.category.code}`}>{drought.category.susceptibility}</span>
                         <small>Podatność gleby</small>
                       </div>
                       <div>
-                        <span className="drought-value">{drought.currentRisk}</span>
+                        <span className={`drought-value drought-risk-${drought.currentRisk.replaceAll(" ", "-")}`}>{drought.currentRisk}</span>
                         <small>Wskaźnik bieżącego ryzyka</small>
                       </div>
                     </div>
+                    {drought.previewUrl && (
+                      <figure className="drought-preview">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={drought.previewUrl} alt="Mały wycinek mapy podatności gleby IUNG dla granic działki" />
+                        <figcaption>Wycinek mapy IUNG dla działki</figcaption>
+                      </figure>
+                    )}
                     <p className="drought-interpretation">{drought.interpretation}</p>
                     {drought.precipitationDeficitMm !== null && drought.precipitationDeficitMm > 0 && (
                       <p className="drought-deficit">Niedobór względem orientacyjnego progu: <strong>{drought.precipitationDeficitMm.toFixed(1)} mm</strong></p>
