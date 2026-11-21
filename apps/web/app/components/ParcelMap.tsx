@@ -6,6 +6,23 @@ import { MapContainer, TileLayer, useMap, useMapEvents, GeoJSON, CircleMarker } 
 import type { Geometry } from "geojson";
 import type { ParcelResult } from "../types";
 
+const POLAND_BOUNDS = L.latLngBounds([48.7, 13.7], [55.1, 24.5]);
+
+function LimitToPoland() {
+  const map = useMap();
+  useEffect(() => {
+    const updateMinZoom = () => {
+      const zoom = map.getBoundsZoom(POLAND_BOUNDS, true);
+      map.setMinZoom(zoom);
+      if (map.getZoom() < zoom) map.setZoom(zoom);
+    };
+    updateMinZoom();
+    map.on("resize", updateMinZoom);
+    return () => { map.off("resize", updateMinZoom); };
+  }, [map]);
+  return null;
+}
+
 function MapClick({ onSelectPoint }: { onSelectPoint: (lat: number, lng: number) => void }) {
   useMapEvents({ click: ({ latlng }) => onSelectPoint(latlng.lat, latlng.lng) });
   return null;
@@ -29,8 +46,21 @@ export default function ParcelMap({ onSelectPoint, parcel, className = "map-fram
 }) {
   return (
     <div className={className}>
-      <MapContainer center={[52.1, 19.4]} zoom={6} scrollWheelZoom className="leaflet-map">
-        <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      <MapContainer
+        center={[52.1, 19.4]}
+        zoom={6}
+        maxBounds={POLAND_BOUNDS}
+        maxBoundsViscosity={1}
+        scrollWheelZoom
+        className="leaflet-map"
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          bounds={POLAND_BOUNDS}
+          maxZoom={19}
+        />
+        <LimitToPoland />
         {onSelectPoint && <MapClick onSelectPoint={onSelectPoint} />}
         <FitParcel parcel={parcel} />
         {parcel?.geometry && <GeoJSON key={parcel.id} data={parcel.geometry as Geometry} style={{ color: "#16805b", weight: 3, fillColor: "#36b37e", fillOpacity: 0.25 }} />}
