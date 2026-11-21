@@ -22,15 +22,16 @@ function FitParcel({ parcel }: { parcel: ParcelResult | null }) {
   return null;
 }
 
-export default function ParcelMap({ onSelectPoint, parcel }: {
-  onSelectPoint: (lat: number, lng: number) => void;
+export default function ParcelMap({ onSelectPoint, parcel, className = "map-frame" }: {
+  onSelectPoint?: (lat: number, lng: number) => void;
   parcel: ParcelResult | null;
+  className?: string;
 }) {
   return (
-    <div className="map-frame">
+    <div className={className}>
       <MapContainer center={[52.1, 19.4]} zoom={6} scrollWheelZoom className="leaflet-map">
         <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        <MapClick onSelectPoint={onSelectPoint} />
+        {onSelectPoint && <MapClick onSelectPoint={onSelectPoint} />}
         <FitParcel parcel={parcel} />
         {parcel?.geometry && <GeoJSON key={parcel.id} data={parcel.geometry as Geometry} style={{ color: "#16805b", weight: 3, fillColor: "#36b37e", fillOpacity: 0.25 }} />}
         {parcel?.lat != null && parcel?.lng != null && (
