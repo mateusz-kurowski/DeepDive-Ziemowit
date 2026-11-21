@@ -64,7 +64,23 @@ function parseParcelRow(row: string) {
     geometry = null;
   }
 
-  return { id, parcel: parcel || id.split(".").at(-1) || "Nieznany", commune, county, voivodeship, geometry };
+  let lat: number | null = null;
+  let lng: number | null = null;
+  if (geometry?.type === "Polygon") {
+    const points = geometry.coordinates.flat();
+    if (points.length > 0) {
+      lng = points.reduce((sum, point) => sum + point[0], 0) / points.length;
+      lat = points.reduce((sum, point) => sum + point[1], 0) / points.length;
+    }
+  } else if (geometry?.type === "MultiPolygon") {
+    const points = geometry.coordinates.flat(2);
+    if (points.length > 0) {
+      lng = points.reduce((sum, point) => sum + point[0], 0) / points.length;
+      lat = points.reduce((sum, point) => sum + point[1], 0) / points.length;
+    }
+  }
+
+  return { id, parcel: parcel || id.split(".").at(-1) || "Nieznany", commune, county, voivodeship, lat, lng, geometry };
 }
 
 export async function POST(request: Request) {
@@ -153,7 +169,7 @@ export async function POST(request: Request) {
     if (!parcel) {
       return NextResponse.json({ error: "W tym miejscu nie znaleziono działki w granicach Polski." }, { status: 404 });
     }
-    return NextResponse.json(parcel);
+    return NextResponse.json({ ...parcel, lat, lng });
   } catch (error) {
     const message = error instanceof Error && error.name === "AbortError"
       ? "Usługa lokalizacji działek odpowiada zbyt długo. Spróbuj ponownie za chwilę."
