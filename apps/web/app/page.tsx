@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { ParcelResult } from "./types";
+import BrandLogo from "./components/BrandLogo";
 const ParcelMap = dynamic(() => import("./components/ParcelMap"), {
   ssr: false,
   loading: () => <div className="map-loading">Ładowanie mapy…</div>,
@@ -397,13 +398,23 @@ export default function Home() {
 
   return (
     <main className="app-shell">
-      <header className="page-header">
-        <div className="brand-mark" aria-hidden="true">🌱</div>
+      <header className="hero">
         <div>
-          <p className="eyebrow">ASYSTENT WODNY ROLNIKA</p>
-          <h1>Zatrzymaj wodę, chroń plony</h1>
-          <p className="intro">Wpisz numer działki lub kliknij na mapie, aby wybrać działkę do analizy.</p>
+          <div className="hero-brand">
+            <BrandLogo className="hero-logo" />
+            <div>
+              <p className="eyebrow">ASYSTENT WODNY ROLNIKA</p>
+              <h1 className="brand-name">Ziemowit</h1>
+              <p className="brand-slogan">Grunt to <span>nawodnienie</span></p>
+            </div>
+          </div>
+          <p className="intro hero-intro">Sprawdź, ile wody ma Twoja działka i co zrobić, żeby jej nie stracić. Wpisz numer działki lub kliknij na mapie.</p>
         </div>
+        <ol className="hero-steps" aria-label="Jak to działa">
+          <li><span>1</span>Wybierz działkę</li>
+          <li><span>2</span>Sprawdź pogodę i glebę</li>
+          <li><span>3</span>Otwórz raport wodny</li>
+        </ol>
       </header>
       <section className="workspace" aria-label="Wybór działki">
         <div className="map-column">
@@ -688,7 +699,7 @@ export default function Home() {
           <div className="source-box"><span className="source-check">✓</span><p>Dane pobierane na bieżąco z usługi lokalizacji działek GUGiK (ULDK).</p></div>
         </aside>
       </section>
-      <footer>Wynik lokalizacji ma charakter informacyjny. Granice na mapie pochodzą z ewidencji udostępnianej przez ULDK.</footer>
+      <footer><strong>Ziemowit</strong> · grunt to nawodnienie. Wynik lokalizacji ma charakter informacyjny. Granice na mapie pochodzą z ewidencji udostępnianej przez ULDK.</footer>
     </main>
   );
 }

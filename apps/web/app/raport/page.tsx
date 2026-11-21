@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import ReportView from "./ReportView";
 export const metadata: Metadata = {
-  title: "Raport wodny działki – Zatrzymaj wodę, chroń plony",
+  title: "Raport wodny działki – Ziemowit",
 };
 
 export default async function ReportPage({ searchParams }: {

@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import type { HydroResult, HydroStation, ParcelResult, SatelliteResult, WeatherResult } from "../types";
+import BrandLogo from "../components/BrandLogo";
 import { buildAdvice, timingLabel } from "./advice";
 import { buildSimpleTiles, buildSummary } from "./findings";
 
@@ -181,21 +182,27 @@ export default function ReportView({ parcelId, point, crop }: {
   return (
     <main className="app-shell report-shell">
       <div className="report-toolbar">
-        <a className="report-back" href="/">← Wróć do mapy</a>
-        <button
-          className="report-print"
-          onClick={() => window.print()}
-          disabled={dataLoading || satellite.status === "loading"}
-          title={satellite.status === "loading" ? "Czekam na wskaźniki Sentinel-2" : undefined}
-        >
-          Drukuj / zapisz PDF
-        </button>
+        <a className="report-brand" href="/" aria-label="Ziemowit – strona główna">
+          <BrandLogo className="report-brand-logo" />
+          <span><strong>Ziemowit</strong><small>Grunt to nawodnienie</small></span>
+        </a>
+        <div className="report-actions">
+          <a className="report-back" href="/">← Wróć do mapy</a>
+          <button
+            className="report-print"
+            onClick={() => window.print()}
+            disabled={dataLoading || satellite.status === "loading"}
+            title={satellite.status === "loading" ? "Czekam na wskaźniki Sentinel-2" : undefined}
+          >
+            Drukuj / zapisz PDF
+          </button>
+        </div>
       </div>
 
       <header className="page-header report-header">
         <div className="brand-mark" aria-hidden="true">💧</div>
         <div>
-          <p className="eyebrow">RAPORT WODNY DZIAŁKI</p>
+          <p className="eyebrow">ZIEMOWIT · RAPORT WODNY DZIAŁKI</p>
           <h1>{parcelData ? `Działka ${parcelData.parcel}` : parcelId || "Raport działki"}</h1>
           <p className="intro">
             {parcelData ? [parcelData.commune, parcelData.county, parcelData.voivodeship].filter(Boolean).join(" · ") : "Podsumowanie pomiarów meteorologicznych, hydrologicznych i satelitarnych"}
