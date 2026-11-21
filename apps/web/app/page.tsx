@@ -399,7 +399,7 @@ export default function Home() {
                     </div>
                     <p className="drought-interpretation">{drought.interpretation}</p>
                     <p className="drought-map-explanation">
-                      <strong>Zielona linia i punkt</strong> oznaczają wybraną działkę. Kolory nakładki IUNG oznaczają podatność gleby: żółty I, pomarańczowy II, czerwony III, brązowy IV.
+                      <strong>Niebieska linia i punkt</strong> oznaczają wybraną działkę. Kolory nakładki IUNG oznaczają podatność gleby: żółty I, pomarańczowy II, czerwony III, brązowy IV.
                     </p>
                     {drought.precipitationDeficitMm !== null && drought.precipitationDeficitMm > 0 && (
                       <p className="drought-deficit">Niedobór względem orientacyjnego progu: <strong>{drought.precipitationDeficitMm.toFixed(1)} mm</strong></p>

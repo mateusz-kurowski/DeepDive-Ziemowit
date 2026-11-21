@@ -49,7 +49,7 @@ export default function ParcelMap({ onSelectPoint, parcel, showDroughtLayer }: {
             opacity={0.72}
           />
         )}
-        {parcel?.geometry && <GeoJSON key={parcel.id} data={parcel.geometry as Geometry} style={{ color: "#16805b", weight: 3, fillColor: "#36b37e", fillOpacity: 0.06 }} />}
+        {parcel?.geometry && <GeoJSON key={parcel.id} data={parcel.geometry as Geometry} style={{ color: "#2355a6", weight: 4, fill: false }} />}
         {parcel?.lat != null && parcel?.lng != null && (
           <CircleMarker
             center={[parcel.lat, parcel.lng]}
