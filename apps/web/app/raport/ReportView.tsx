@@ -2,8 +2,11 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
-import type { HydroResult, HydroStation, ParcelResult, WeatherResult } from "../types";
-import { buildSummary } from "./findings";
+import type { HydroResult, HydroStation, ParcelResult, SatelliteResult, WeatherResult } from "../types";
+import { buildSimpleTiles, buildSummary } from "./findings";
+
+type ReportMode = "simple" | "detailed";
+const MODE_KEY = "report-mode";
 
 const ParcelMap = dynamic(() => import("../components/ParcelMap"), {
   ssr: false,
@@ -34,10 +37,6 @@ function todayIso() {
   return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 }
 
-function formatValue(value: number | null | undefined, unit: string) {
-  return value === null || value === undefined ? "—" : `${value} ${unit}`;
-}
-
 const stationLabel: Record<HydroStation["status"], string> = {
   normal: "Stan normalny",
   warning: "Stan ostrzegawczy",
@@ -52,17 +51,47 @@ const soilLabel: Record<HydroResult["soil"]["status"], string> = {
   unknown: "Brak danych",
 };
 
-export default function ReportView({ parcelId, point }: { parcelId: string; point: { lat: number; lng: number } | null }) {
+const cropLabels: Record<string, string> = {
+  zboza: "zboża",
+  rzepak: "rzepak",
+  ziemniaki: "ziemniaki",
+  buraki: "buraki",
+  kukorydza: "kukurydza",
+  owoce: "owoce i sad",
+  warzywa: "warzywa",
+  inna: "inna uprawa",
+};
+
+export default function ReportView({ parcelId, point, crop }: {
+  parcelId: string;
+  point: { lat: number; lng: number } | null;
+  crop: string;
+}) {
   const [parcel, setParcel] = useState<LoadState<ParcelResult>>({ status: "loading" });
   const [weather, setWeather] = useState<LoadState<WeatherResult>>({ status: "loading" });
   const [hydro, setHydro] = useState<LoadState<HydroResult>>({ status: "loading" });
-  const [generatedAt] = useState(() => new Date());
+  const [satellite, setSatellite] = useState<LoadState<SatelliteResult>>({ status: "loading" });
+  const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
+  const [mode, setMode] = useState<ReportMode>("simple");
+
+  useEffect(() => {
+    setGeneratedAt(new Date());
+    if (localStorage.getItem(MODE_KEY) === "detailed") setMode("detailed");
+  }, []);
+
+  function changeMode(next: ReportMode) {
+    setMode(next);
+    localStorage.setItem(MODE_KEY, next);
+    window.scrollTo({ top: 0 });
+  }
 
   useEffect(() => {
     if (!parcelId) {
       setParcel({ status: "error", message: "Brak identyfikatora działki w adresie raportu." });
+      setSatellite({ status: "error", message: "Brak identyfikatora działki." });
       return;
     }
+    setSatellite({ status: "loading" });
     const controller = new AbortController();
 
     (async () => {
@@ -78,6 +107,7 @@ export default function ReportView({ parcelId, point }: { parcelId: string; poin
         if (!point) {
           setWeather({ status: "error", message: "Brak lokalizacji działki." });
           setHydro({ status: "error", message: "Brak lokalizacji działki." });
+          setSatellite({ status: "error", message: "Brak lokalizacji działki." });
           return;
         }
         selected = { id: parcelId, parcel: parcelId, commune: "", county: "", voivodeship: "", lat: point.lat, lng: point.lng, geometry: null };
@@ -88,34 +118,71 @@ export default function ReportView({ parcelId, point }: { parcelId: string; poin
       if (lat == null || lng == null) {
         setWeather({ status: "error", message: "Brak współrzędnych działki." });
         setHydro({ status: "error", message: "Brak współrzędnych działki." });
+        setSatellite({ status: "error", message: "Brak współrzędnych działki." });
         return;
       }
 
-      void postJson<WeatherResult>("/api/weather", { latitude: lat, longitude: lng, date: todayIso() }, controller.signal)
-        .then((data) => setWeather({ status: "ready", data }))
-        .catch((reason) => { if (!controller.signal.aborted) setWeather({ status: "error", message: errorMessage(reason, "Dane meteorologiczne niedostępne.") }); });
       void postJson<HydroResult>("/api/hydro", { latitude: lat, longitude: lng }, controller.signal)
         .then((data) => setHydro({ status: "ready", data }))
         .catch((reason) => { if (!controller.signal.aborted) setHydro({ status: "error", message: errorMessage(reason, "Dane hydrologiczne niedostępne.") }); });
+
+      void (async () => {
+        let weatherAvailable = false;
+        try {
+          const data = await postJson<WeatherResult>("/api/weather", { latitude: lat, longitude: lng, date: todayIso() }, controller.signal);
+          weatherAvailable = true;
+          if (!controller.signal.aborted) setWeather({ status: "ready", data });
+        } catch (reason) {
+          if (!controller.signal.aborted) setWeather({ status: "error", message: errorMessage(reason, "Dane meteorologiczne niedostępne.") });
+        }
+        if (controller.signal.aborted) return;
+        try {
+          const data = await postJson<SatelliteResult>("/api/satellite", {
+            lat,
+            lng,
+            geometry: selected.geometry,
+            crop,
+            weatherAvailable,
+          }, controller.signal);
+          if (!controller.signal.aborted) setSatellite({ status: "ready", data });
+        } catch (reason) {
+          if (!controller.signal.aborted) setSatellite({ status: "error", message: errorMessage(reason, "Dane satelitarne niedostępne.") });
+        }
+      })();
     })();
 
     return () => controller.abort();
-  }, [parcelId, point?.lat, point?.lng]);
+  }, [parcelId, point?.lat, point?.lng, crop]);
 
   const weatherData = weather.status === "ready" ? weather.data : null;
   const hydroData = hydro.status === "ready" ? hydro.data : null;
+  const satelliteData = satellite.status === "ready" ? satellite.data : null;
   const parcelData = parcel.status === "ready" ? parcel.data : null;
   const dataLoading = weather.status === "loading" || hydro.status === "loading";
+  const satelliteArg = satellite.status === "loading" ? undefined : satelliteData;
   const summary = useMemo(
-    () => (dataLoading || (!weatherData && !hydroData) ? null : buildSummary(weatherData, hydroData)),
-    [dataLoading, weatherData, hydroData],
+    () => (dataLoading || (!weatherData && !hydroData) ? null : buildSummary(weatherData, hydroData, satelliteArg)),
+    [dataLoading, weatherData, hydroData, satelliteArg],
   );
+  const tiles = useMemo(
+    () => (summary ? buildSimpleTiles(weatherData, hydroData, satelliteArg) : []),
+    [summary, weatherData, hydroData, satelliteArg],
+  );
+  const detailed = mode === "detailed";
+  const cropName = cropLabels[crop] ?? "wybrana uprawa";
 
   return (
     <main className="app-shell report-shell">
       <div className="report-toolbar">
         <a className="report-back" href="/">← Wróć do mapy</a>
-        <button className="report-print" onClick={() => window.print()} disabled={dataLoading}>Drukuj / zapisz PDF</button>
+        <button
+          className="report-print"
+          onClick={() => window.print()}
+          disabled={dataLoading || satellite.status === "loading"}
+          title={satellite.status === "loading" ? "Czekam na wskaźniki Sentinel-2" : undefined}
+        >
+          Drukuj / zapisz PDF
+        </button>
       </div>
 
       <header className="page-header report-header">
@@ -124,8 +191,9 @@ export default function ReportView({ parcelId, point }: { parcelId: string; poin
           <p className="eyebrow">RAPORT WODNY DZIAŁKI</p>
           <h1>{parcelData ? `Działka ${parcelData.parcel}` : parcelId || "Raport działki"}</h1>
           <p className="intro">
-            {parcelData ? [parcelData.commune, parcelData.county, parcelData.voivodeship].filter(Boolean).join(" · ") : "Podsumowanie pomiarów meteorologicznych i hydrologicznych"}
-            {" · "}wygenerowano {generatedAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" })}
+            {parcelData ? [parcelData.commune, parcelData.county, parcelData.voivodeship].filter(Boolean).join(" · ") : "Podsumowanie pomiarów meteorologicznych, hydrologicznych i satelitarnych"}
+            {" · "}uprawa: {cropName}
+            {" · "}wygenerowano {generatedAt ? generatedAt.toLocaleString("pl-PL", { dateStyle: "medium", timeStyle: "short" }) : "…"}
           </p>
         </div>
       </header>
@@ -134,25 +202,44 @@ export default function ReportView({ parcelId, point }: { parcelId: string; poin
         <div className="error-message report-block" role="alert"><strong>Problem z danymi działki</strong><p>{parcel.message}</p></div>
       )}
 
+      <div className="report-mode" role="radiogroup" aria-label="Widok raportu">
+        <span className="report-mode-label">Widok raportu:</span>
+        <button type="button" role="radio" aria-checked={!detailed} className={!detailed ? "active" : ""} onClick={() => changeMode("simple")}>
+          Prosty
+        </button>
+        <button type="button" role="radio" aria-checked={detailed} className={detailed ? "active" : ""} onClick={() => changeMode("detailed")}>
+          Szczegółowy
+        </button>
+      </div>
+
       <section className="report-top">
         <div className="report-card report-verdict-card">
           {summary ? (
-            <div className={`report-verdict level-${summary.verdict.level}`}>
-              <span className="weather-kicker">OCENA OGÓLNA</span>
-              <h2>{summary.verdict.title}</h2>
-              <p>{summary.verdict.text}</p>
-            </div>
+            <>
+              <div className={`report-verdict level-${summary.verdict.level}`}>
+                <span className="weather-kicker">OCENA OGÓLNA</span>
+                <h2>{summary.verdict.title}</h2>
+                <p>{detailed ? summary.verdict.text : summary.verdict.plain}</p>
+              </div>
+              {tiles.length > 0 && (
+                <ul className="simple-tiles">
+                  {tiles.map((tile) => (
+                    <li key={tile.label} className={`simple-tile tile-${tile.level}`}>
+                      <span className="simple-tile-icon" aria-hidden="true">{tile.icon}</span>
+                      <div>
+                        <small>{tile.label}</small>
+                        <strong>{tile.status}</strong>
+                        <span>{tile.hint}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
           ) : dataLoading ? (
-            <div className="status-message"><span className="spinner" /> Analizuję dane meteorologiczne i hydrologiczne…</div>
+            <div className="status-message"><span className="spinner" /> Sprawdzam pogodę i wodę dla Twojej działki…</div>
           ) : (
             <div className="weather-error">Nie udało się przygotować oceny – brak danych pomiarowych.</div>
-          )}
-          {parcelData && (
-            <dl className="report-facts">
-              <div><dt>Identyfikator</dt><dd>{parcelData.id}</dd></div>
-              <div><dt>Lokalizacja</dt><dd>{(point?.lat ?? parcelData.lat)?.toFixed(5)}, {(point?.lng ?? parcelData.lng)?.toFixed(5)}</dd></div>
-              <div><dt>Wysokość terenu</dt><dd>{formatValue(hydroData?.elevationM, "m n.p.m.")}</dd></div>
-            </dl>
           )}
         </div>
         <div className="report-card report-map-card">
@@ -160,7 +247,26 @@ export default function ReportView({ parcelId, point }: { parcelId: string; poin
         </div>
       </section>
 
-      {summary && (
+      {summary && !detailed && (
+        <section className="report-card report-block">
+          <h2 className="report-title">Co warto zrobić</h2>
+          <ul className="simple-todo">
+            {summary.recommendations.map((item) => <li key={item}>{item}</li>)}
+          </ul>
+        </section>
+      )}
+
+      {!detailed && (
+        <section className="report-card report-block simple-more">
+          <div>
+            <strong>Chcesz zobaczyć dokładne liczby?</strong>
+            <p>W raporcie szczegółowym są pomiary opadów, wilgotności gleby, stany rzek, wykresy i zdjęcia satelitarne.</p>
+          </div>
+          <button type="button" onClick={() => changeMode("detailed")}>Pokaż raport szczegółowy</button>
+        </section>
+      )}
+
+      {detailed && summary && (
         <section className="report-grid-2">
           <div className="report-card">
             <h2 className="report-title">Najważniejsze wnioski</h2>
@@ -182,6 +288,7 @@ export default function ReportView({ parcelId, point }: { parcelId: string; poin
         </section>
       )}
 
+      {detailed && (<>
       <section className="report-card report-block">
         <div className="report-section-heading">
           <div><span className="weather-kicker">METEOROLOGIA · OSTATNIE 30 DNI</span><h2 className="report-title">Pomiary meteorologiczne</h2></div>
@@ -222,6 +329,7 @@ export default function ReportView({ parcelId, point }: { parcelId: string; poin
               <Metric value={hydro.data.soil.deepPct} unit="% obj." label="Wilgotność głęboka 27–81 cm" />
               <Metric value={hydro.data.waterBalance.evapotranspirationMm} unit="mm" label="Parowanie (ET₀) / 30 dni" />
               <Metric value={hydro.data.waterBalance.balanceMm} unit="mm" label="Klimatyczny bilans wodny" signed />
+              <Metric value={hydro.data.elevationM} unit="m n.p.m." label="Wysokość terenu" />
             </div>
 
             <h3 className="report-subtitle">Opad i parowanie dzień po dniu</h3>
@@ -269,15 +377,76 @@ export default function ReportView({ parcelId, point }: { parcelId: string; poin
         )}
       </section>
 
+      <section className="report-card report-block">
+        <div className="report-section-heading">
+          <div>
+            <span className="weather-kicker">SENTINEL-2 · NDVI · {cropName.toUpperCase()}</span>
+            <h2 className="report-title">Wskaźniki satelitarne</h2>
+          </div>
+          {satelliteData && (
+            <span className="weather-source">
+              {satelliteData.provider} · {satelliteData.status === "partial" ? "częściowe pokrycie" : satelliteData.level}
+            </span>
+          )}
+        </div>
+        {satellite.status === "loading" ? (
+          <div className="status-message"><span className="spinner" /> Analizuję obraz Sentinel-2 dla działki…</div>
+        ) : satellite.status === "error" ? (
+          <div className="weather-error">{satellite.message}</div>
+        ) : satellite.data.status === "unavailable" ? (
+          <p className="satellite-unavailable">{satellite.data.interpretation}</p>
+        ) : (
+          <>
+            {(satellite.data.currentImageUrl || satellite.data.historicalImageUrl) && (
+              <div className="satellite-comparison report-images">
+                {satellite.data.currentImageUrl && (
+                  <figure>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={satellite.data.currentImageUrl} alt={`Obraz prawdziwokolorowy działki z ${satellite.data.date ?? "bieżącej obserwacji"}`} />
+                    <figcaption>Teraz · {satellite.data.date ?? "brak daty"}</figcaption>
+                  </figure>
+                )}
+                {satellite.data.historicalImageUrl && (
+                  <figure>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={satellite.data.historicalImageUrl} alt="Obraz prawdziwokolorowy działki z roku poprzedniego" />
+                    <figcaption>Rok temu · porównanie sezonowe</figcaption>
+                  </figure>
+                )}
+              </div>
+            )}
+            <div className="report-metrics report-metrics-4">
+              <Metric value={satellite.data.ndvi} unit="" label="NDVI teraz" digits={2} />
+              <Metric value={satellite.data.historicalNdvi} unit="" label="NDVI rok temu" digits={2} />
+              <Metric value={satellite.data.ndviDifference} unit="" label="Różnica rok do roku" digits={2} signed />
+              <Metric value={satellite.data.validPixelPercent} unit="%" label="Ważne piksele działki" digits={1} />
+            </div>
+            <p className="satellite-meta">
+              Obserwacja: <strong>{satellite.data.date ?? "brak"}</strong>
+              {" · "}chmury: <strong>{satellite.data.cloudCoverPercent?.toFixed(1) ?? "—"}%</strong>
+              {" · "}rozdzielczość: <strong>{satellite.data.resolutionMeters ? `${satellite.data.resolutionMeters} m` : "—"}</strong>
+              {" · "}uprawa: <strong>{cropName}</strong>
+            </p>
+            <p className="ndvi-explanation">
+              <strong>Co oznacza NDVI?</strong> Wskaźnik od 0 do 1 opisuje intensywność zielonego pokrycia roślin:
+              poniżej 0,3 — słabe lub rozproszone, 0,3–0,6 — umiarkowane, powyżej 0,6 — silne.
+              Nie jest pomiarem wilgotności gleby.
+            </p>
+            <p className="satellite-interpretation">{satellite.data.interpretation}</p>
+          </>
+        )}
+      </section>
+
       <section className="report-card report-block report-limitations">
         <h2 className="report-title">Ograniczenia raportu</h2>
         <ul>
-          {[...(hydroData?.limitations ?? []), ...(weatherData?.limitations ?? [])].map((item) => <li key={item}>{item}</li>)}
+          {[...(satelliteData?.limitations ?? []), ...(hydroData?.limitations ?? []), ...(weatherData?.limitations ?? [])].map((item) => <li key={item}>{item}</li>)}
           <li>Raport ma charakter informacyjny i nie zastępuje pomiarów terenowych ani decyzji eksperta.</li>
         </ul>
       </section>
+      </>)}
 
-      <footer>Źródła: GUGiK ULDK, Open-Meteo, GloFAS (Copernicus), IMGW-PIB. Mapa © OpenStreetMap.</footer>
+      <footer>Źródła: GUGiK ULDK, Open-Meteo, GloFAS (Copernicus), IMGW-PIB, Earth Search (Sentinel-2 L2A). Mapa © OpenStreetMap.</footer>
     </main>
   );
 }
@@ -332,11 +501,12 @@ function WaterChart({ days }: { days: HydroResult["daily"] }) {
   );
 }
 
-function Metric({ value, unit, label, signed = false }: { value: number | null; unit: string; label: string; signed?: boolean }) {
+function Metric({ value, unit, label, signed = false, digits }: { value: number | null; unit: string; label: string; signed?: boolean; digits?: number }) {
+  const shown = value === null ? "—" : `${signed && value > 0 ? "+" : ""}${digits === undefined ? value : value.toFixed(digits)}`;
   return (
     <div className="report-metric">
-      <span className="weather-value">{value === null ? "—" : `${signed && value > 0 ? "+" : ""}${value}`}</span>
-      <span className="weather-unit">{unit}</span>
+      <span className="weather-value">{shown}</span>
+      {unit && <span className="weather-unit">{unit}</span>}
       <small>{label}</small>
     </div>
   );

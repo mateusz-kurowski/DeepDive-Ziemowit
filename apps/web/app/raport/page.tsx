@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import ReportView from "./ReportView";
+import "../styles.css";
 
 export const metadata: Metadata = {
   title: "Raport wodny działki – Zatrzymaj wodę, chroń plony",
@@ -16,6 +17,7 @@ export default async function ReportPage({ searchParams }: {
   return (
     <ReportView
       parcelId={single(params.id)}
+      crop={single(params.crop) || "zboza"}
       point={single(params.lat) && single(params.lng) && Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null}
     />
   );

@@ -87,3 +87,22 @@ export type HydroResult = {
   sources: string[];
   limitations: string[];
 };
+
+export type SatelliteResult = {
+  status: "available" | "partial" | "unavailable";
+  provider: "Earth Search";
+  satellite: "Sentinel-2";
+  level: "L2A";
+  currentImageUrl: string | null;
+  historicalImageUrl: string | null;
+  date: string | null;
+  cloudCoverPercent: number | null;
+  resolutionMeters: number | null;
+  ndvi: number | null;
+  historicalNdvi: number | null;
+  ndviDifference: number | null;
+  validPixelPercent: number | null;
+  crop: string;
+  interpretation: string;
+  limitations: string[];
+};

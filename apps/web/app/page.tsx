@@ -11,6 +11,15 @@ const ParcelMap = dynamic(() => import("./components/ParcelMap"), {
   loading: () => <div className="map-loading">Ładowanie mapy…</div>,
 });
 
+function reportUrl(parcel: ParcelResult, selectedCrop: string) {
+  const params = new URLSearchParams({ id: parcel.id, crop: selectedCrop });
+  if (parcel.lat != null && parcel.lng != null) {
+    params.set("lat", parcel.lat.toFixed(6));
+    params.set("lng", parcel.lng.toFixed(6));
+  }
+  return `/raport?${params}`;
+}
+
 type WeatherResult = {
   date: string;
   indicators: {
@@ -424,6 +433,10 @@ export default function Home() {
                 )}
               </dl>
               <div className="selected-badge"><span /> Działka zaznaczona na mapie</div>
+              <a className="report-button" href={reportUrl(parcel, crop)} target="_blank" rel="noopener">
+                Otwórz raport wodny działki <span aria-hidden="true">→</span>
+              </a>
+              <p className="report-button-help">W nowej karcie: pogoda, hydrologia i wskaźniki Sentinel-2 (NDVI) dla wybranej uprawy.</p>
             </>
           ) : (
             <div className="empty-state"><div className="empty-illustration" aria-hidden="true">⌖</div><p>Wskaż punkt na mapie, aby zobaczyć numer działki oraz dane gminy, powiatu i województwa.</p></div>

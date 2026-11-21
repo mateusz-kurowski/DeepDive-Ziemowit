@@ -1,16 +1,75 @@
-import type { HydroResult, WeatherResult } from "../types";
+import type { HydroResult, SatelliteResult, WeatherResult } from "../types";
 
 export type FindingLevel = "good" | "info" | "warn" | "bad";
 
 export type Finding = { level: FindingLevel; title: string; text: string };
 
 export type ReportSummary = {
-  verdict: { level: FindingLevel; title: string; text: string };
+  verdict: { level: FindingLevel; title: string; text: string; plain: string };
   findings: Finding[];
   recommendations: string[];
 };
 
-export function buildSummary(weather: WeatherResult | null, hydro: HydroResult | null): ReportSummary {
+export type SimpleTile = { icon: string; label: string; status: string; hint: string; level: FindingLevel };
+
+export function buildSimpleTiles(
+  weather: WeatherResult | null,
+  hydro: HydroResult | null,
+  satellite?: SatelliteResult | null,
+): SimpleTile[] {
+  const tiles: SimpleTile[] = [];
+
+  const diff = weather?.historicalSummary.differencePercent ?? null;
+  const balance = hydro?.waterBalance.balanceMm ?? null;
+  if (diff !== null) {
+    tiles.push(diff <= -20
+      ? { icon: "🌧️", label: "Deszcz", status: "Mniej deszczu niż zwykle", hint: "w ostatnim miesiącu", level: "warn" }
+      : diff >= 20
+        ? { icon: "🌧️", label: "Deszcz", status: "Więcej deszczu niż zwykle", hint: "w ostatnim miesiącu", level: "info" }
+        : { icon: "🌧️", label: "Deszcz", status: "Tyle deszczu co zwykle", hint: "w ostatnim miesiącu", level: "good" });
+  } else if (balance !== null) {
+    tiles.push(balance < -5
+      ? { icon: "🌧️", label: "Deszcz", status: "Za mało deszczu", hint: "więcej wody wyparowało, niż spadło", level: "warn" }
+      : balance > 15
+        ? { icon: "🌧️", label: "Deszcz", status: "Dużo deszczu", hint: "spadło więcej wody, niż wyparowało", level: "info" }
+        : { icon: "🌧️", label: "Deszcz", status: "Deszczu w sam raz", hint: "w ostatnim miesiącu", level: "good" });
+  }
+
+  const soil = hydro?.soil.status;
+  if (soil === "dry") tiles.push({ icon: "💧", label: "Ziemia", status: "Ziemia jest sucha", hint: "korzenie mają za mało wody", level: "bad" });
+  else if (soil === "moderate") tiles.push({ icon: "💧", label: "Ziemia", status: "Ziemia jest lekko wilgotna", hint: "roślinom wody wystarcza", level: "good" });
+  else if (soil === "wet") tiles.push({ icon: "💧", label: "Ziemia", status: "Ziemia jest mokra", hint: "dobry moment, by zatrzymać wodę", level: "info" });
+
+  if (satellite && satellite.status !== "unavailable" && satellite.ndvi !== null) {
+    tiles.push(satellite.ndvi < 0.3
+      ? { icon: "🌾", label: "Rośliny", status: "Rośliny słabo zielone", hint: "widok z satelity", level: "warn" }
+      : satellite.ndvi >= 0.6
+        ? { icon: "🌾", label: "Rośliny", status: "Rośliny mocno zielone", hint: "widok z satelity", level: "good" }
+        : { icon: "🌾", label: "Rośliny", status: "Rośliny średnio zielone", hint: "widok z satelity", level: "info" });
+  } else if (satellite !== undefined) {
+    tiles.push({ icon: "🌾", label: "Rośliny", status: "Brak zdjęcia z satelity", hint: "np. przez chmury", level: "info" });
+  }
+
+  const alert = hydro?.stations.find((station) => station.status === "alarm" || station.status === "warning");
+  const forecast = hydro?.forecast.balanceMm ?? null;
+  if (alert) {
+    tiles.push({ icon: "🌊", label: "Rzeki", status: "Wysoka woda w rzece", hint: `${alert.river ?? alert.name} – uważaj na podtopienia`, level: alert.status === "alarm" ? "bad" : "warn" });
+  } else if (forecast !== null) {
+    tiles.push(forecast < -5
+      ? { icon: "📅", label: "Najbliższy tydzień", status: "Będzie sucho", hint: "mało deszczu w prognozie", level: "warn" }
+      : forecast > 5
+        ? { icon: "📅", label: "Najbliższy tydzień", status: "Będzie padać", hint: "ziemia dostanie wodę", level: "info" }
+        : { icon: "📅", label: "Najbliższy tydzień", status: "Bez większych zmian", hint: "według prognozy pogody", level: "good" });
+  }
+
+  return tiles;
+}
+
+export function buildSummary(
+  weather: WeatherResult | null,
+  hydro: HydroResult | null,
+  satellite?: SatelliteResult | null,
+): ReportSummary {
   const findings: Finding[] = [];
   let deficit = 0;
   let surplus = 0;
@@ -87,10 +146,88 @@ export function buildSummary(weather: WeatherResult | null, hydro: HydroResult |
     }
   }
 
+  let vegetationStress = false;
+  if (satellite === null) {
+    findings.push({
+      level: "info",
+      title: "Brak wskaźnika satelitarnego",
+      text: "Nie udało się pobrać NDVI z Sentinel-2. Raport nie podaje pozornej wartości roślinności.",
+    });
+  } else if (satellite) {
+    if (satellite.status === "unavailable" || satellite.ndvi === null) {
+      findings.push({
+        level: "info",
+        title: "Brak jakościowego NDVI",
+        text: satellite.interpretation,
+      });
+    } else {
+      const ndviText = `NDVI ${satellite.ndvi.toFixed(2)}`;
+      const observedOn = satellite.date ?? "ostatniej sceny";
+      if (satellite.ndvi < 0.3) {
+        vegetationStress = true;
+        findings.push({
+          level: "warn",
+          title: "Słaba zielona biomasa (NDVI)",
+          text: `${ndviText} z ${observedOn} oznacza słabe lub rozproszone pokrycie roślin. NDVI nie mierzy wilgotności gleby.`,
+        });
+      } else if (satellite.ndvi >= 0.6) {
+        findings.push({
+          level: "good",
+          title: "Silna zielona biomasa (NDVI)",
+          text: `${ndviText} z ${observedOn} wskazuje na intensywne zielone pokrycie.`,
+        });
+      } else {
+        findings.push({
+          level: "info",
+          title: "Umiarkowana zielona biomasa (NDVI)",
+          text: `${ndviText} z ${observedOn} mieści się w zakresie umiarkowanego pokrycia roślin.`,
+        });
+      }
+
+      if (satellite.ndviDifference !== null && satellite.historicalNdvi !== null) {
+        const signed = `${satellite.ndviDifference > 0 ? "+" : ""}${satellite.ndviDifference.toFixed(2)}`;
+        if (satellite.ndviDifference <= -0.08) {
+          vegetationStress = true;
+          findings.push({
+            level: "warn",
+            title: "Spadek NDVI rok do roku",
+            text: `Względem analogicznego okresu ubiegłego roku NDVI spadło z ${satellite.historicalNdvi.toFixed(2)}. Różnica wynosi ${signed}.`,
+          });
+        } else if (satellite.ndviDifference >= 0.08) {
+          findings.push({
+            level: "info",
+            title: "Wzrost NDVI rok do roku",
+            text: `NDVI jest wyższe o ${satellite.ndviDifference.toFixed(2)} względem ubiegłego roku (${satellite.historicalNdvi.toFixed(2)}).`,
+          });
+        } else {
+          findings.push({
+            level: "good",
+            title: "NDVI zbliżone do ubiegłego roku",
+            text: `Różnica rok do roku wynosi ${signed}.`,
+          });
+        }
+      }
+
+      if (satellite.status === "partial") {
+        findings.push({
+          level: "info",
+          title: "Częściowe pokrycie Sentinel-2",
+          text: `Ważne piksele obejmują ${satellite.validPixelPercent ?? "—"}% działki, więc wskaźnik NDVI jest mniej pewny.`,
+        });
+      }
+    }
+  }
+
+  let satelliteRaisedDeficit = false;
+  if (vegetationStress && deficit > 0) {
+    deficit += 1;
+    satelliteRaisedDeficit = true;
+  }
+
   let verdict: ReportSummary["verdict"];
   let recommendations: string[];
   if (deficit >= 3) {
-    verdict = { level: "bad", title: "Wysokie ryzyko niedoboru wody", text: "Wskaźniki meteorologiczne i hydrologiczne wskazują na przesuszenie działki. Warto pilnie zatrzymać wodę w krajobrazie." };
+    verdict = { level: "bad", title: "Wysokie ryzyko niedoboru wody", text: "Wskaźniki meteorologiczne i hydrologiczne wskazują na przesuszenie działki. Warto pilnie zatrzymać wodę w krajobrazie.", plain: "Na Twoim polu jest za sucho. Warto jak najszybciej zatrzymać wodę, która jeszcze została na polu i w rowach." };
     recommendations = [
       "Zamknij lub podnieś zastawki na rowach melioracyjnych, aby ograniczyć odpływ wody z działki.",
       "Ogranicz uprawę płużną – uprawa uproszczona i mulcz zmniejszają parowanie z gleby.",
@@ -98,32 +235,48 @@ export function buildSummary(weather: WeatherResult | null, hydro: HydroResult |
       "Jeżeli działka ma nawadnianie, planuj je wcześnie rano lub wieczorem, by ograniczyć straty na parowanie.",
     ];
   } else if (deficit >= 1 && deficit > surplus) {
-    verdict = { level: "warn", title: "Umiarkowane ryzyko niedoboru wody", text: "Część wskaźników wskazuje na spadek zasobów wody. Sytuację warto monitorować i przygotować działania retencyjne." };
+    verdict = { level: "warn", title: "Umiarkowane ryzyko niedoboru wody", text: "Część wskaźników wskazuje na spadek zasobów wody. Sytuację warto monitorować i przygotować działania retencyjne.", plain: "Wody zaczyna brakować. To dobry moment, żeby przygotować pole na suszę." };
     recommendations = [
       "Sprawdź drożność i ustawienie zastawek – utrzymuj wyższy poziom wody w rowach.",
       "Unikaj zabiegów przesuszających glebę (głęboka orka, odkryta gleba).",
       "Rozważ zadrzewienia śródpolne lub pasy buforowe ograniczające wiatr i parowanie.",
     ];
   } else if (hasStationAlert || surplus >= 4) {
-    verdict = { level: "warn", title: "Nadmiar wody – ryzyko podtopień", text: "Gleba i cieki są mocno zasilone. Nadwyżkę warto zatrzymać na później zamiast szybko ją odprowadzać." };
+    verdict = { level: "warn", title: "Nadmiar wody – ryzyko podtopień", text: "Gleba i cieki są mocno zasilone. Nadwyżkę warto zatrzymać na później zamiast szybko ją odprowadzać.", plain: "Wody jest bardzo dużo, a rzeki w okolicy są wysoko. Uważaj na podtopienia, a nadmiar wody zatrzymaj na później." };
     recommendations = [
       "Zatrzymaj nadmiar wody w oczkach wodnych, zbiornikach lub na zastawkach zamiast odprowadzać go do rzeki.",
       "Unikaj wjazdu ciężkim sprzętem na mokre pole – grozi to zagęszczeniem gleby.",
       "Śledź komunikaty IMGW o stanach wód na pobliskich rzekach.",
     ];
   } else if (surplus >= 2) {
-    verdict = { level: "info", title: "Dobre uwilgotnienie – czas magazynować wodę", text: "Gleba jest dobrze zasilona, a opady przewyższają parowanie. To najlepszy moment, by zatrzymać tę wodę na sezon wegetacyjny." };
+    verdict = { level: "info", title: "Dobre uwilgotnienie – czas magazynować wodę", text: "Gleba jest dobrze zasilona, a opady przewyższają parowanie. To najlepszy moment, by zatrzymać tę wodę na sezon wegetacyjny.", plain: "Ziemia jest dobrze nawodniona. Zatrzymaj tę wodę na polu – przyda się latem, gdy będzie sucho." };
     recommendations = [
       "Podnieś zastawki na rowach, aby nadwyżka wody wsiąkała w glebę zamiast odpływać.",
       "Kieruj spływ z pola do oczek wodnych lub zagłębień terenu zamiast do rowów odwadniających.",
       "Unikaj wjazdu ciężkim sprzętem na mokre pole – grozi to zagęszczeniem gleby.",
     ];
   } else {
-    verdict = { level: "good", title: "Sytuacja wodna stabilna", text: "Bilans wody i wilgotność gleby są zbliżone do normy. To dobry moment, by przygotować działkę na okresy suszy." };
+    verdict = { level: "good", title: "Sytuacja wodna stabilna", text: "Bilans wody i wilgotność gleby są zbliżone do normy. To dobry moment, by przygotować działkę na okresy suszy.", plain: "Z wodą na Twoim polu jest w porządku. Możesz spokojnie przygotować się na suchsze dni." };
     recommendations = [
       "Utrzymuj zastawki w gotowości, aby szybko zatrzymać wodę w razie spadku opadów.",
       "Dbaj o zawartość próchnicy – poprawia ona zdolność gleby do magazynowania wody.",
     ];
+  }
+
+  if (satelliteRaisedDeficit && deficit > surplus) {
+    verdict = {
+      ...verdict,
+      text: `${verdict.text} Sentinel-2 pokazuje słabszą zieloną biomasę i wzmacnia tę ocenę. NDVI nie jest pomiarem wilgotności gleby.`,
+    };
+    recommendations = [
+      ...recommendations,
+      "Sprawdź w terenie, czy słabsze zazielenienie wynika z fazy uprawy, zbioru czy niedoboru wody — sam NDVI tego nie rozstrzyga.",
+    ];
+  } else if (vegetationStress) {
+    verdict = {
+      ...verdict,
+      text: `${verdict.text} Sentinel-2 pokazuje słabszą zieloną biomasę. Sam wskaźnik nie oznacza niedoboru wody — warto sprawdzić fazę uprawy i stan roślin w terenie.`,
+    };
   }
 
   return { verdict, findings, recommendations };
