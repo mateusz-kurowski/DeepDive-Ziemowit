@@ -33,6 +33,7 @@ type SatelliteResult = {
   provider: "Earth Search";
   satellite: "Sentinel-2";
   level: "L2A";
+  thumbnailUrl: string | null;
   date: string | null;
   cloudCoverPercent: number | null;
   resolutionMeters: number | null;
@@ -313,6 +314,13 @@ export default function Home() {
                   <p className="satellite-unavailable">Brak jakościowej obserwacji Sentinel-2 w ostatnich 90 dniach. Nie pokazano pozornego NDVI.</p>
                 ) : (
                   <>
+                    {satellite.thumbnailUrl && (
+                      <a className="satellite-preview" href={satellite.thumbnailUrl} target="_blank" rel="noreferrer" title="Otwórz podgląd obrazu Sentinel-2">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={satellite.thumbnailUrl} alt={`Obraz Sentinel-2 z dnia ${satellite.date ?? "nieznana data"}`} />
+                        <span>Obraz Sentinel-2 ↗</span>
+                      </a>
+                    )}
                     <div className="satellite-metrics">
                       <div><span className="satellite-value">{satellite.ndvi?.toFixed(2) ?? "—"}</span><small>NDVI teraz</small></div>
                       <div><span className="satellite-value">{satellite.historicalNdvi?.toFixed(2) ?? "—"}</span><small>NDVI rok temu</small></div>

@@ -28,6 +28,7 @@ type SatelliteResult = {
   provider: "Earth Search";
   satellite: "Sentinel-2";
   level: "L2A";
+  thumbnailUrl: string | null;
   date: string | null;
   cloudCoverPercent: number | null;
   resolutionMeters: number | null;
@@ -267,6 +268,7 @@ export async function POST(request: Request) {
         provider: "Earth Search",
         satellite: "Sentinel-2",
         level: "L2A",
+        thumbnailUrl: null,
         date: null,
         cloudCoverPercent: null,
         resolutionMeters: null,
@@ -294,6 +296,7 @@ export async function POST(request: Request) {
       provider: "Earth Search",
       satellite: "Sentinel-2",
       level: "L2A",
+      thumbnailUrl: currentItem.assets.thumbnail?.href ?? null,
       date: currentItem.properties.datetime?.slice(0, 10) ?? null,
       cloudCoverPercent: currentItem.properties["eo:cloud_cover"] != null
         ? Number(currentItem.properties["eo:cloud_cover"].toFixed(2))
