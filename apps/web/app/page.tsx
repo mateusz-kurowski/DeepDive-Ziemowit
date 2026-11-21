@@ -1,259 +1,284 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import dynamic from "next/dynamic";
+import { useEffect, useRef, useState } from "react";
+import type { FormEvent } from "react";
+import type { ParcelResult } from "./types";
+import "./styles.css";
+
+const ParcelMap = dynamic(() => import("./components/ParcelMap"), {
+  ssr: false,
+  loading: () => <div className="map-loading">Ładowanie mapy…</div>,
+});
 
 type WeatherResult = {
   date: string;
-  source: {
-    provider: string;
-    endpoint: string;
-    fetchedAt: string;
-  };
-  coverage: {
-    start: string;
-    end: string;
-    daysRequested: number;
-    daysAvailable: number;
-  };
   indicators: {
     precipitationSumMm: number | null;
     averageTemperatureC: number | null;
-    maximumTemperatureC: number | null;
     longestDrySpellDays: number | null;
-    precipitationShortfallMm: number | null;
   };
-  series: Array<{
-    date: string;
-    precipitationMm: number | null;
-    meanTemperatureC: number | null;
-    maxTemperatureC: number | null;
-  }>;
   historicalSummary: {
     status: "available" | "partial" | "unavailable";
-    yearsRequested: number;
-    yearsAvailable: number;
-    averagePrecipitationMm: number | null;
-    medianPrecipitationMm: number | null;
-    selectedPrecipitationMm: number | null;
-    differenceMm: number | null;
     differencePercent: number | null;
-    averageTemperatureC: number | null;
     assessment: string;
-    limitation: string | null;
   };
-  limitations: string[];
+  source: {
+    provider: string;
+  };
 };
 
 export default function Home() {
-  const [latitude, setLatitude] = useState("52.23");
-  const [longitude, setLongitude] = useState("21.01");
-  const [date, setDate] = useState("2026-11-21");
-  const [result, setResult] = useState<WeatherResult | null>(null);
+  const [parcel, setParcel] = useState<ParcelResult | null>(null);
   const [error, setError] = useState("");
+  const [searchError, setSearchError] = useState("");
+  const [searchText, setSearchText] = useState("");
+  const [candidates, setCandidates] = useState<ParcelResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [weather, setWeather] = useState<WeatherResult | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
+  const [weatherError, setWeatherError] = useState("");
+  const requestRef = useRef<AbortController | null>(null);
+  const weatherRequestRef = useRef<AbortController | null>(null);
 
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    setLoading(true);
-    setError("");
-    setResult(null);
+  useEffect(() => () => {
+    requestRef.current?.abort();
+    weatherRequestRef.current?.abort();
+  }, []);
+
+  async function fetchWeather(lat: number, lng: number) {
+    weatherRequestRef.current?.abort();
+    const controller = new AbortController();
+    weatherRequestRef.current = controller;
+    setWeatherLoading(true);
+    setWeatherError("");
+    setWeather(null);
+
+    const today = new Date();
+    const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
     try {
       const response = await fetch("/api/weather", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ latitude, longitude, date }),
+        body: JSON.stringify({ latitude: lat, longitude: lng, date }),
         cache: "no-store",
+        signal: controller.signal,
       });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error ?? "Nie udało się pobrać meteo.");
-      setResult(payload);
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Nieznany błąd.");
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Nie udało się pobrać danych pogodowych.");
+      setWeather(result as WeatherResult);
+    } catch (reason) {
+      if (!(reason instanceof Error && reason.name === "AbortError")) {
+        setWeatherError(reason instanceof Error ? reason.message : "Nie udało się pobrać danych pogodowych.");
+      }
     } finally {
-      setLoading(false);
+      if (weatherRequestRef.current === controller) {
+        weatherRequestRef.current = null;
+        setWeatherLoading(false);
+      }
+    }
+  }
+
+  function selectParcel(selected: ParcelResult) {
+    setParcel(selected);
+    setCandidates([]);
+    if (selected.lat != null && selected.lng != null) {
+      void fetchWeather(selected.lat, selected.lng);
+    } else {
+      weatherRequestRef.current?.abort();
+      setWeather(null);
+      setWeatherError("");
+    }
+  }
+
+  async function selectPoint(lat: number, lng: number) {
+    requestRef.current?.abort();
+    weatherRequestRef.current?.abort();
+    weatherRequestRef.current = null;
+    const controller = new AbortController();
+    requestRef.current = controller;
+    setLoading(true);
+    setError("");
+    setSearchError("");
+    setCandidates([]);
+    setParcel(null);
+    setWeather(null);
+    setWeatherError("");
+    setWeatherLoading(false);
+    try {
+      const response = await fetch("/api/parcels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lat, lng }),
+        signal: controller.signal,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Nie udało się znaleźć działki.");
+      selectParcel(result as ParcelResult);
+    } catch (reason) {
+      if (!(reason instanceof Error && reason.name === "AbortError")) {
+        setError(reason instanceof Error ? reason.message : "Wystąpił nieznany błąd.");
+      }
+    } finally {
+      if (requestRef.current === controller) {
+        requestRef.current = null;
+        setLoading(false);
+      }
+    }
+  }
+
+  async function searchParcel(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const identifier = searchText.trim();
+    if (!identifier) {
+      setSearchError("Wpisz identyfikator działki.");
+      return;
+    }
+
+    requestRef.current?.abort();
+    weatherRequestRef.current?.abort();
+    weatherRequestRef.current = null;
+    const controller = new AbortController();
+    requestRef.current = controller;
+    setLoading(true);
+    setError("");
+    setSearchError("");
+    setCandidates([]);
+    setParcel(null);
+    setWeather(null);
+    setWeatherError("");
+    setWeatherLoading(false);
+    try {
+      const response = await fetch("/api/parcels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier }),
+        signal: controller.signal,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Nie udało się znaleźć działki.");
+      const matches = result.parcels as ParcelResult[];
+      if (matches.length === 1) selectParcel(matches[0]);
+      else setCandidates(matches);
+    } catch (reason) {
+      if (!(reason instanceof Error && reason.name === "AbortError")) {
+        setSearchError(reason instanceof Error ? reason.message : "Wystąpił nieznany błąd.");
+      }
+    } finally {
+      if (requestRef.current === controller) {
+        requestRef.current = null;
+        setLoading(false);
+      }
     }
   }
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        padding: "48px 20px",
-        fontFamily: "Arial, sans-serif",
-        background: "#f4f7f5",
-        color: "#15382a",
-      }}
-    >
-      <section style={{ maxWidth: 960, margin: "0 auto" }}>
-        <h1>Zatrzymaj wodę, chroń plony</h1>
-        <p>Wstępny moduł meteorologiczny dla punktu działki.</p>
-
-        <aside
-          style={{
-            marginBottom: 12,
-            padding: "12px 16px",
-            background: "#e7f1ec",
-            borderRadius: 12,
-          }}
-        >
-          <strong>Źródło danych:</strong>{" "}
-          <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">
-            Open-Meteo
-          </a>
-          <br />
-          Dane są pobierane dopiero po kliknięciu „Pobierz meteo”. Dla bieżących dat
-          używane jest API forecast, dla starszych archiwum.
-        </aside>
-
-        <form
-          onSubmit={submit}
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: 12,
-            padding: 16,
-            background: "#fff",
-            borderRadius: 12,
-          }}
-        >
-          <label>
-            Szerokość
-            <input value={latitude} onChange={(event) => setLatitude(event.target.value)} required />
-          </label>
-          <label>
-            Długość
-            <input value={longitude} onChange={(event) => setLongitude(event.target.value)} required />
-          </label>
-          <label>
-            Data
-            <input type="date" value={date} onChange={(event) => setDate(event.target.value)} required />
-          </label>
-          <button type="submit" disabled={loading} style={{ alignSelf: "end", minHeight: 40 }}>
-            {loading ? "Analizuję..." : "Pobierz meteo"}
-          </button>
-        </form>
-
-        {loading && (
-          <p role="status" style={{ marginTop: 16, padding: 12, background: "#fff3cd", borderRadius: 8 }}>
-            Pobieranie danych meteorologicznych z Open-Meteo...
-          </p>
-        )}
-
-        {error && <p role="alert" style={{ color: "#a11" }}>{error}</p>}
-
-        {result && (
-          <section style={{ marginTop: 20 }}>
-            <h2>Wynik dla {result.date}</h2>
-            <aside
-              style={{
-                marginBottom: 16,
-                padding: "12px 16px",
-                background: "#fff",
-                borderLeft: "4px solid #2f8060",
-              }}
-            >
-              <strong>Pobranie zakończone</strong>
-              <br />
-              Dostawca: {result.source.provider}
-              {" · "}API: {result.source.endpoint}
-              {" · "}czas pobrania: {new Date(result.source.fetchedAt).toLocaleString("pl-PL")}
-              <br />
-              Pokrycie: {result.coverage.daysAvailable}/{result.coverage.daysRequested} dni
-              {" "}({result.coverage.start}–{result.coverage.end})
-            </aside>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
-              <article><strong>Opady 30 dni</strong><br />{result.indicators.precipitationSumMm ?? "brak"} mm</article>
-              <article><strong>Średnia temperatura</strong><br />{result.indicators.averageTemperatureC ?? "brak"} °C</article>
-              <article><strong>Najwyższa średnia dobowa</strong><br />{result.indicators.maximumTemperatureC ?? "brak"} °C</article>
-              <article><strong>Najdłuższa sekwencja dni bezopadowych</strong><br />{result.indicators.longestDrySpellDays ?? "brak"} dni</article>
-              <article><strong>Krótki wskaźnik poniżej progu 30 mm</strong><br />{result.indicators.precipitationShortfallMm ?? "brak"} mm</article>
-            </div>
-
-            <section
-              style={{
-                marginTop: 16,
-                padding: 16,
-                background: "#eef5ff",
-                borderRadius: 12,
-              }}
-            >
-              <h3 style={{ marginTop: 0 }}>Podsumowanie historyczne</h3>
-              {result.historicalSummary.status === "unavailable" ? (
-                <p role="alert">
-                  {result.historicalSummary.assessment}
-                  {result.historicalSummary.limitation && (
-                    <> {result.historicalSummary.limitation}</>
-                  )}
-                </p>
-              ) : (
+    <main className="app-shell">
+      <header className="page-header">
+        <div className="brand-mark" aria-hidden="true">🌱</div>
+        <div>
+          <p className="eyebrow">ASYSTENT WODNY ROLNIKA</p>
+          <h1>Zatrzymaj wodę, chroń plony</h1>
+          <p className="intro">Wpisz numer działki lub kliknij na mapie, aby wybrać działkę do analizy.</p>
+        </div>
+      </header>
+      <section className="workspace" aria-label="Wybór działki">
+        <div className="map-column">
+          <div className="map-heading">
+            <div><h2>Wybierz działkę</h2><p>Przybliż mapę i kliknij wewnątrz jej granic.</p></div>
+            <span className="map-hint">⌖ Kliknij punkt na mapie</span>
+          </div>
+          <ParcelMap onSelectPoint={selectPoint} parcel={parcel} />
+          <p className="attribution-note">Dane działek: GUGiK, ULDK. Podkład mapy: © OpenStreetMap.</p>
+          {(weatherLoading || weather || weatherError) && (
+            <section className="weather-card" aria-live="polite" aria-label="Najważniejsze dane pogodowe">
+              <div className="weather-card-heading">
+                <div>
+                  <span className="weather-kicker">METEO · {weather?.date ?? "ostatnie 30 dni"}</span>
+                  <h2>Warunki pogodowe działki</h2>
+                </div>
+                {weather && <span className="weather-source">{weather.source.provider}</span>}
+              </div>
+              {weatherLoading ? (
+                <div className="weather-status"><span className="spinner" /> Pobieram dane pogodowe…</div>
+              ) : weatherError ? (
+                <div className="weather-error" role="alert">{weatherError}</div>
+              ) : weather ? (
                 <>
-                  <p>
-                    <strong>{result.historicalSummary.assessment}</strong>
-                  </p>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
-                    <article>
-                      <strong>Opady obecnie</strong><br />
-                      {result.historicalSummary.selectedPrecipitationMm ?? "brak"} mm
-                    </article>
-                    <article>
-                      <strong>Średnia z lat historycznych</strong><br />
-                      {result.historicalSummary.averagePrecipitationMm ?? "brak"} mm
-                    </article>
-                    <article>
-                      <strong>Mediana historyczna</strong><br />
-                      {result.historicalSummary.medianPrecipitationMm ?? "brak"} mm
-                    </article>
-                    <article>
-                      <strong>Różnica</strong><br />
-                      {result.historicalSummary.differenceMm ?? "brak"} mm
-                      {result.historicalSummary.differencePercent !== null &&
-                        ` (${result.historicalSummary.differencePercent > 0 ? "+" : ""}${result.historicalSummary.differencePercent}%)`}
-                    </article>
+                  <div className="weather-metrics">
+                    <div><span className="weather-value">{weather.indicators.precipitationSumMm ?? "—"}</span><span className="weather-unit">mm</span><small>Suma opadów / 30 dni</small></div>
+                    <div><span className="weather-value">{weather.indicators.averageTemperatureC ?? "—"}</span><span className="weather-unit">°C</span><small>Średnia temperatura</small></div>
+                    <div><span className="weather-value">{weather.indicators.longestDrySpellDays ?? "—"}</span><span className="weather-unit">dni</span><small>Najdłużej bez opadów</small></div>
                   </div>
-                  <p>
-                    Lata z danymi: {result.historicalSummary.yearsAvailable}/
-                    {result.historicalSummary.yearsRequested}.
-                  </p>
-                  {result.historicalSummary.limitation && (
-                    <p>{result.historicalSummary.limitation}</p>
+                  {weather.historicalSummary.status !== "unavailable" && weather.historicalSummary.differencePercent !== null && (
+                    <p className="weather-history">
+                      <strong>{weather.historicalSummary.differencePercent > 0 ? "+" : ""}{weather.historicalSummary.differencePercent}%</strong>
+                      {" "}w porównaniu do średniej historycznej opadów.
+                    </p>
                   )}
                 </>
-              )}
-              {result.historicalSummary.status === "partial" && (
-                <p>Porównanie jest częściowe z powodu brakujących danych w części lat.</p>
-              )}
+              ) : null}
             </section>
-
-            <p>
-              Pokrycie: {result.coverage.daysAvailable}/{result.coverage.daysRequested} dni,
-              {" "}{result.coverage.start}–{result.coverage.end}.
-              Źródło: {result.source.provider}, {result.source.endpoint},
-              pobrano {new Date(result.source.fetchedAt).toLocaleString("pl-PL")}.
-            </p>
-
-            <h3>Serie dobowe</h3>
-            <div style={{ maxHeight: 260, overflow: "auto", background: "#fff", borderRadius: 12 }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead><tr><th align="left">Data</th><th>Opady mm</th><th>Średnia °C</th><th>Max °C</th></tr></thead>
-                <tbody>
-                  {result.series.map((item) => (
-                    <tr key={item.date}>
-                      <td>{item.date}</td>
-                      <td align="right">{item.precipitationMm ?? "—"}</td>
-                      <td align="right">{item.meanTemperatureC ?? "—"}</td>
-                      <td align="right">{item.maxTemperatureC ?? "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          )}
+        </div>
+        <aside className="details-panel" aria-live="polite">
+          <div className="panel-icon" aria-hidden="true">▧</div>
+          <h2>Wybrana działka</h2>
+          <form className="parcel-search" onSubmit={searchParcel}>
+            <label htmlFor="parcel-identifier">Znajdź działkę po numerze</label>
+            <div className="search-controls">
+              <input
+                id="parcel-identifier"
+                value={searchText}
+                onChange={(event) => setSearchText(event.target.value)}
+                placeholder="np. Krzewina 134"
+                autoComplete="off"
+              />
+              <button type="submit" disabled={loading} aria-label="Szukaj działki">{loading ? "…" : "Szukaj"}</button>
             </div>
-
-            <h3>Ograniczenia</h3>
-            <ul>{result.limitations.map((item) => <li key={item}>{item}</li>)}</ul>
-          </section>
-        )}
+            <p className="search-help">Wpisz pełny identyfikator albo nazwę obrębu i numer.</p>
+            {searchError && <p className="search-error" role="alert">{searchError}</p>}
+          </form>
+          {candidates.length > 0 && (
+            <div className="candidate-list" aria-live="polite">
+              <p>Znaleziono kilka działek. Wybierz właściwą:</p>
+              {candidates.map((candidate) => (
+                <button className="candidate-option" key={candidate.id} onClick={() => selectParcel(candidate)}>
+                  <strong>{candidate.parcel}</strong>
+                  <span>{[candidate.commune, candidate.county, candidate.voivodeship].filter(Boolean).join(", ")}</span>
+                  <small>{candidate.id}</small>
+                </button>
+              ))}
+            </div>
+          )}
+          {loading ? (
+            <div className="status-message"><span className="spinner" /> Sprawdzam działkę…</div>
+          ) : error ? (
+            <div className="error-message" role="alert"><strong>Nie udało się wybrać działki</strong><p>{error}</p></div>
+          ) : candidates.length > 0 ? (
+            <div className="empty-state"><p>Wybierz działkę z listy powyżej, aby wyświetlić jej granice na mapie.</p></div>
+          ) : parcel ? (
+            <>
+              <p className="parcel-number">{parcel.parcel}</p>
+              <dl className="parcel-data">
+                <div><dt>Identyfikator</dt><dd>{parcel.id}</dd></div>
+                <div><dt>Gmina</dt><dd>{parcel.commune || "Brak danych"}</dd></div>
+                <div><dt>Powiat</dt><dd>{parcel.county || "Brak danych"}</dd></div>
+                <div><dt>Województwo</dt><dd>{parcel.voivodeship || "Brak danych"}</dd></div>
+                {parcel.lat != null && parcel.lng != null && (
+                  <div><dt>Lokalizacja</dt><dd>{parcel.lat.toFixed(6)}, {parcel.lng.toFixed(6)}<small className="coordinate-label"> lat, lon</small></dd></div>
+                )}
+              </dl>
+              <div className="selected-badge"><span /> Działka zaznaczona na mapie</div>
+            </>
+          ) : (
+            <div className="empty-state"><div className="empty-illustration" aria-hidden="true">⌖</div><p>Wskaż punkt na mapie, aby zobaczyć numer działki oraz dane gminy, powiatu i województwa.</p></div>
+          )}
+          <div className="source-box"><span className="source-check">✓</span><p>Dane pobierane na bieżąco z usługi lokalizacji działek GUGiK (ULDK).</p></div>
+        </aside>
       </section>
+      <footer>Wynik lokalizacji ma charakter informacyjny. Granice na mapie pochodzą z ewidencji udostępnianej przez ULDK.</footer>
     </main>
   );
 }
