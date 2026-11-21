@@ -28,6 +28,16 @@ type WeatherResult = {
   };
 };
 
+type SoilTextureResult = {
+  status: "available" | "partial" | "unresolved-zero";
+  depth: string;
+  statistic: string;
+  units: string;
+  fractions: Record<"sand" | "silt" | "clay", { label: string; valueGkg: number | null; flag: string }>;
+  samplePoint: { lat: number; lng: number };
+  source: { name: string; resolutionM: number; url: string };
+};
+
 export default function Home() {
   const [parcel, setParcel] = useState<ParcelResult | null>(null);
   const [error, setError] = useState("");
@@ -38,12 +48,17 @@ export default function Home() {
   const [weather, setWeather] = useState<WeatherResult | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState("");
+  const [soilTexture, setSoilTexture] = useState<SoilTextureResult | null>(null);
+  const [soilLoading, setSoilLoading] = useState(false);
+  const [soilError, setSoilError] = useState("");
   const requestRef = useRef<AbortController | null>(null);
   const weatherRequestRef = useRef<AbortController | null>(null);
+  const soilRequestRef = useRef<AbortController | null>(null);
 
   useEffect(() => () => {
     requestRef.current?.abort();
     weatherRequestRef.current?.abort();
+    soilRequestRef.current?.abort();
   }, []);
 
   async function fetchWeather(lat: number, lng: number) {
@@ -80,15 +95,50 @@ export default function Home() {
     }
   }
 
+  async function fetchSoilTexture(lat: number, lng: number) {
+    soilRequestRef.current?.abort();
+    const controller = new AbortController();
+    soilRequestRef.current = controller;
+    setSoilLoading(true);
+    setSoilError("");
+    setSoilTexture(null);
+    try {
+      const response = await fetch("/api/soil-texture", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lat, lng }),
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Nie udało się pobrać uziarnienia gleby.");
+      setSoilTexture(result as SoilTextureResult);
+    } catch (reason) {
+      if (!(reason instanceof Error && reason.name === "AbortError")) {
+        setSoilError(reason instanceof Error ? reason.message : "Nie udało się pobrać uziarnienia gleby.");
+      }
+    } finally {
+      if (soilRequestRef.current === controller) {
+        soilRequestRef.current = null;
+        setSoilLoading(false);
+      }
+    }
+  }
+
   function selectParcel(selected: ParcelResult) {
     setParcel(selected);
     setCandidates([]);
     if (selected.lat != null && selected.lng != null) {
       void fetchWeather(selected.lat, selected.lng);
+      void fetchSoilTexture(selected.lat, selected.lng);
     } else {
       weatherRequestRef.current?.abort();
       setWeather(null);
       setWeatherError("");
+      soilRequestRef.current?.abort();
+      setSoilTexture(null);
+      setSoilError("Dla tej działki nie udało się wyznaczyć punktu do odczytu gleby.");
+      setSoilLoading(false);
     }
   }
 
@@ -96,6 +146,8 @@ export default function Home() {
     requestRef.current?.abort();
     weatherRequestRef.current?.abort();
     weatherRequestRef.current = null;
+    soilRequestRef.current?.abort();
+    soilRequestRef.current = null;
     const controller = new AbortController();
     requestRef.current = controller;
     setLoading(true);
@@ -106,6 +158,9 @@ export default function Home() {
     setWeather(null);
     setWeatherError("");
     setWeatherLoading(false);
+    setSoilTexture(null);
+    setSoilError("");
+    setSoilLoading(false);
     try {
       const response = await fetch("/api/parcels", {
         method: "POST",
@@ -139,6 +194,8 @@ export default function Home() {
     requestRef.current?.abort();
     weatherRequestRef.current?.abort();
     weatherRequestRef.current = null;
+    soilRequestRef.current?.abort();
+    soilRequestRef.current = null;
     const controller = new AbortController();
     requestRef.current = controller;
     setLoading(true);
@@ -149,6 +206,9 @@ export default function Home() {
     setWeather(null);
     setWeatherError("");
     setWeatherLoading(false);
+    setSoilTexture(null);
+    setSoilError("");
+    setSoilLoading(false);
     try {
       const response = await fetch("/api/parcels", {
         method: "POST",
@@ -228,16 +288,36 @@ export default function Home() {
                   <span className="terrain-kicker">CHARAKTERYSTYKA DZIAŁKI</span>
                   <h2>Teren i gleba</h2>
                 </div>
-                <span className="coming-soon">W przygotowaniu</span>
+                {soilTexture && <span className="terrain-source">SoilGrids · {soilTexture.source.resolutionM} m</span>}
               </div>
-              <p className="terrain-description">Planowane dane dla działki {parcel.parcel}.</p>
-              <div className="terrain-metrics">
-                <div><span>Uziarnienie gleby</span><strong>—</strong><small>brak danych</small></div>
-                <div><span>Podatność na suszę</span><strong>—</strong><small>brak danych</small></div>
-                <div><span>Pojemność wodna</span><strong>—</strong><small>brak danych</small></div>
-                <div><span>Nachylenie terenu</span><strong>—</strong><small>brak danych</small></div>
-              </div>
-              <p className="terrain-note">Wartości nie są jeszcze pobierane. Panel przygotowuje miejsce na dane glebowe i numeryczny model terenu.</p>
+              <p className="terrain-description">Uziarnienie wierzchniej warstwy gleby (0–5 cm) dla działki {parcel.parcel}.</p>
+              {soilLoading ? (
+                <div className="weather-status"><span className="spinner" /> Pobieram dane o glebie z SoilGrids…</div>
+              ) : soilError ? (
+                <div className="weather-error" role="alert">{soilError}</div>
+              ) : soilTexture?.status === "unresolved-zero" ? (
+                <div className="soil-unavailable" role="status">Źródło zwróciło same zera bez znacznika braku danych. Nie pokazujemy ich jako składu gleby.</div>
+              ) : soilTexture ? (
+                <>
+                  <div className="soil-fractions" aria-label="Udziały frakcji gleby">
+                    {(["sand", "silt", "clay"] as const).map((key) => {
+                      const fraction = soilTexture.fractions[key];
+                      const percent = fraction.valueGkg === null ? null : fraction.valueGkg / 10;
+                      return (
+                        <div className="soil-fraction" key={key}>
+                          <div className="soil-fraction-heading"><span>{fraction.label}</span><strong>{percent === null ? "—" : `${percent.toFixed(1)}%`}</strong></div>
+                          <div className="soil-bar"><span className={`soil-bar-fill soil-${key}`} style={{ width: `${Math.max(0, Math.min(percent ?? 0, 100))}%` }} /></div>
+                          <small>{fraction.valueGkg === null ? "brak danych" : `${fraction.valueGkg} g/kg`}</small>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {soilTexture.status === "partial" && <p className="soil-unavailable">Część frakcji nie ma wartości w źródle.</p>}
+                </>
+              ) : null}
+              <p className="terrain-note">
+                Źródło: <a href={soilTexture?.source.url ?? "https://docs.isric.org/globaldata/soilgrids/"} target="_blank" rel="noreferrer">ISRIC SoilGrids</a>, predykcja modelu o rozdzielczości 250 m; wartości pobrane dla punktu reprezentatywnego działki, nie uśrednione po jej granicach. Frakcje podano oddzielnie, bez normalizowania sumy.
+              </p>
             </section>
           )}
         </div>

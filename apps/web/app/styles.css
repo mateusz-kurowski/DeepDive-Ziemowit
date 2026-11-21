@@ -47,6 +47,20 @@ h1 { margin-bottom: 5px; font: 800 29px/1.2 "Manrope", Arial, sans-serif; letter
 .terrain-metrics strong { color: #829087; font: 700 20px "Manrope", Arial, sans-serif; }
 .terrain-metrics small { color: #98a19b; font-size: 9px; }
 .terrain-note { margin: 12px 0 0; color: #849088; font-size: 10px; line-height: 1.5; }
+.terrain-source { padding: 5px 8px; border-radius: 999px; background: #edf5f0; color: #4b745c; font-size: 9px; font-weight: 700; }
+.soil-fractions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+.soil-fraction { min-width: 0; padding: 11px 12px; border: 1px solid #e7ece8; border-radius: 10px; background: #fafcfb; }
+.soil-fraction-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 5px; }
+.soil-fraction-heading span { color: #58665e; font-size: 10px; font-weight: 600; }
+.soil-fraction-heading strong { color: #28684d; font: 700 16px "Manrope", Arial, sans-serif; white-space: nowrap; }
+.soil-fraction small { display: block; margin-top: 5px; color: #849088; font-size: 9px; }
+.soil-bar { height: 5px; margin-top: 8px; overflow: hidden; border-radius: 99px; background: #e9efeb; }
+.soil-bar-fill { display: block; height: 100%; border-radius: inherit; }
+.soil-sand { background: #d3a652; }
+.soil-silt { background: #739b70; }
+.soil-clay { background: #a56c56; }
+.soil-unavailable { padding: 10px 12px; border: 1px solid #f0d6bd; border-radius: 9px; background: #fff8ef; color: #80572d; font-size: 11px; line-height: 1.45; }
+.terrain-note a { color: #557a65; text-underline-offset: 2px; }
 .details-panel { display: flex; flex-direction: column; padding: 24px 22px; }
 .panel-icon { display: grid; place-items: center; width: 37px; height: 37px; margin-bottom: 14px; border-radius: 11px; background: #e9f4ed; color: var(--green); font-size: 20px; }
 .details-panel h2 { margin-bottom: 20px; }
