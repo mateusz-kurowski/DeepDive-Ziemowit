@@ -4,12 +4,19 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { ParcelResult } from "./types";
-import "./styles.css";
-
 const ParcelMap = dynamic(() => import("./components/ParcelMap"), {
   ssr: false,
   loading: () => <div className="map-loading">Ładowanie mapy…</div>,
 });
+
+function reportUrl(parcel: ParcelResult, selectedCrop: string) {
+  const params = new URLSearchParams({ id: parcel.id, crop: selectedCrop });
+  if (parcel.lat != null && parcel.lng != null) {
+    params.set("lat", parcel.lat.toFixed(6));
+    params.set("lng", parcel.lng.toFixed(6));
+  }
+  return `/raport?${params}`;
+}
 
 type WeatherResult = {
   date: string;
@@ -38,6 +45,42 @@ type SoilTextureResult = {
   source: { name: string; resolutionM: number; url: string };
 };
 
+type SatelliteResult = {
+  status: "available" | "partial" | "unavailable";
+  provider: "Earth Search";
+  satellite: "Sentinel-2";
+  level: "L2A";
+  currentImageUrl: string | null;
+  historicalImageUrl: string | null;
+  date: string | null;
+  cloudCoverPercent: number | null;
+  resolutionMeters: number | null;
+  ndvi: number | null;
+  historicalNdvi: number | null;
+  ndviDifference: number | null;
+  validPixelPercent: number | null;
+  crop: string;
+  interpretation: string;
+  limitations: string[];
+};
+
+type DroughtResult = {
+  status: "available" | "unavailable";
+  provider: "IUNG-PIB";
+  category: {
+    code: number;
+    name: string;
+    susceptibility: string;
+  } | null;
+  previewUrl: string | null;
+  categoryPercentages: Record<"1" | "2" | "3" | "4", number>;
+  unavailableReason: "classification" | "service" | null;
+  precipitation30DaysMm: number | null;
+  precipitationDeficitMm: number | null;
+  currentRisk: "niski" | "umiarkowany" | "wysoki" | "bardzo wysoki" | "brak danych";
+  interpretation: string;
+};
+
 export default function Home() {
   const [parcel, setParcel] = useState<ParcelResult | null>(null);
   const [error, setError] = useState("");
@@ -51,17 +94,105 @@ export default function Home() {
   const [soilTexture, setSoilTexture] = useState<SoilTextureResult | null>(null);
   const [soilLoading, setSoilLoading] = useState(false);
   const [soilError, setSoilError] = useState("");
+  const [satellite, setSatellite] = useState<SatelliteResult | null>(null);
+  const [satelliteLoading, setSatelliteLoading] = useState(false);
+  const [satelliteError, setSatelliteError] = useState("");
+  const [drought, setDrought] = useState<DroughtResult | null>(null);
+  const [droughtLoading, setDroughtLoading] = useState(false);
+  const [droughtError, setDroughtError] = useState("");
+  const [crop, setCrop] = useState("zboza");
   const requestRef = useRef<AbortController | null>(null);
   const weatherRequestRef = useRef<AbortController | null>(null);
   const soilRequestRef = useRef<AbortController | null>(null);
+  const satelliteRequestRef = useRef<AbortController | null>(null);
+  const droughtRequestRef = useRef<AbortController | null>(null);
 
   useEffect(() => () => {
     requestRef.current?.abort();
     weatherRequestRef.current?.abort();
     soilRequestRef.current?.abort();
+    satelliteRequestRef.current?.abort();
+    droughtRequestRef.current?.abort();
   }, []);
 
-  async function fetchWeather(lat: number, lng: number) {
+  async function fetchDrought(
+    lat: number,
+    lng: number,
+    selectedCrop: string,
+    precipitation30DaysMm: number | null = null,
+    geometry: ParcelResult["geometry"] = null,
+  ) {
+    droughtRequestRef.current?.abort();
+    const controller = new AbortController();
+    droughtRequestRef.current = controller;
+    setDroughtLoading(true);
+    setDroughtError("");
+    setDrought(null);
+    try {
+      const response = await fetch("/api/drought", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lat, lng, crop: selectedCrop, geometry, precipitation30DaysMm }),
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Nie udało się pobrać danych o suszy.");
+      setDrought(result as DroughtResult);
+    } catch (reason) {
+      if (!(reason instanceof Error && reason.name === "AbortError")) {
+        setDroughtError(reason instanceof Error ? reason.message : "Nie udało się pobrać danych o suszy.");
+      }
+    } finally {
+      if (droughtRequestRef.current === controller) {
+        droughtRequestRef.current = null;
+        setDroughtLoading(false);
+      }
+    }
+  }
+
+  async function fetchSatellite(selected: ParcelResult, selectedCrop: string) {
+    if (selected.lat == null || selected.lng == null) return;
+    satelliteRequestRef.current?.abort();
+    const controller = new AbortController();
+    satelliteRequestRef.current = controller;
+    setSatelliteLoading(true);
+    setSatelliteError("");
+    setSatellite(null);
+    try {
+      const response = await fetch("/api/satellite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lat: selected.lat,
+          lng: selected.lng,
+          geometry: selected.geometry,
+          crop: selectedCrop,
+          weatherAvailable: weather != null,
+        }),
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Nie udało się pobrać danych satelitarnych.");
+      setSatellite(result as SatelliteResult);
+    } catch (reason) {
+      if (!(reason instanceof Error && reason.name === "AbortError")) {
+        setSatelliteError(reason instanceof Error ? reason.message : "Nie udało się pobrać danych satelitarnych.");
+      }
+    } finally {
+      if (satelliteRequestRef.current === controller) {
+        satelliteRequestRef.current = null;
+        setSatelliteLoading(false);
+      }
+    }
+  }
+
+  async function fetchWeather(
+    lat: number,
+    lng: number,
+    geometry: ParcelResult["geometry"] = null,
+  ) {
     weatherRequestRef.current?.abort();
     const controller = new AbortController();
     weatherRequestRef.current = controller;
@@ -83,6 +214,8 @@ export default function Home() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Nie udało się pobrać danych pogodowych.");
       setWeather(result as WeatherResult);
+      const weatherResult = result as WeatherResult;
+      void fetchDrought(lat, lng, crop, weatherResult.indicators.precipitationSumMm, geometry);
     } catch (reason) {
       if (!(reason instanceof Error && reason.name === "AbortError")) {
         setWeatherError(reason instanceof Error ? reason.message : "Nie udało się pobrać danych pogodowych.");
@@ -129,16 +262,22 @@ export default function Home() {
     setParcel(selected);
     setCandidates([]);
     if (selected.lat != null && selected.lng != null) {
-      void fetchWeather(selected.lat, selected.lng);
+      void fetchWeather(selected.lat, selected.lng, selected.geometry);
       void fetchSoilTexture(selected.lat, selected.lng);
+      void fetchSatellite(selected, crop);
+      void fetchDrought(selected.lat, selected.lng, crop, null, selected.geometry);
     } else {
       weatherRequestRef.current?.abort();
+      satelliteRequestRef.current?.abort();
+      droughtRequestRef.current?.abort();
       setWeather(null);
       setWeatherError("");
       soilRequestRef.current?.abort();
       setSoilTexture(null);
       setSoilError("Dla tej działki nie udało się wyznaczyć punktu do odczytu gleby.");
       setSoilLoading(false);
+      setSatellite(null);
+      setSatelliteError("");
     }
   }
 
@@ -148,6 +287,10 @@ export default function Home() {
     weatherRequestRef.current = null;
     soilRequestRef.current?.abort();
     soilRequestRef.current = null;
+    satelliteRequestRef.current?.abort();
+    satelliteRequestRef.current = null;
+    droughtRequestRef.current?.abort();
+    droughtRequestRef.current = null;
     const controller = new AbortController();
     requestRef.current = controller;
     setLoading(true);
@@ -161,6 +304,12 @@ export default function Home() {
     setSoilTexture(null);
     setSoilError("");
     setSoilLoading(false);
+    setSatellite(null);
+    setSatelliteError("");
+    setSatelliteLoading(false);
+    setDrought(null);
+    setDroughtError("");
+    setDroughtLoading(false);
     try {
       const response = await fetch("/api/parcels", {
         method: "POST",
@@ -196,6 +345,10 @@ export default function Home() {
     weatherRequestRef.current = null;
     soilRequestRef.current?.abort();
     soilRequestRef.current = null;
+    satelliteRequestRef.current?.abort();
+    satelliteRequestRef.current = null;
+    droughtRequestRef.current?.abort();
+    droughtRequestRef.current = null;
     const controller = new AbortController();
     requestRef.current = controller;
     setLoading(true);
@@ -209,6 +362,12 @@ export default function Home() {
     setSoilTexture(null);
     setSoilError("");
     setSoilLoading(false);
+    setSatellite(null);
+    setSatelliteError("");
+    setSatelliteLoading(false);
+    setDrought(null);
+    setDroughtError("");
+    setDroughtLoading(false);
     try {
       const response = await fetch("/api/parcels", {
         method: "POST",
@@ -320,6 +479,119 @@ export default function Home() {
               </p>
             </section>
           )}
+          {(droughtLoading || drought || droughtError) && (
+            <section className="drought-card" aria-live="polite" aria-label="Dane o podatności na suszę">
+              <div className="drought-card-heading">
+                <div>
+                  <span className="drought-kicker">IUNG-PIB · SUSZA</span>
+                  <h2>Podatność gleby i ryzyko suszy</h2>
+                </div>
+                {drought?.category && <span className="drought-category">Kat. {drought.category.code}</span>}
+              </div>
+              {droughtLoading ? (
+                <div className="drought-status"><span className="spinner" /> Pobieram podatność gleby IUNG…</div>
+              ) : droughtError ? (
+                <div className="drought-error" role="alert">{droughtError}</div>
+              ) : drought ? (
+                drought.status === "unavailable" || !drought.category ? (
+                  <div className="drought-unavailable">
+                    <strong>Brak danych o podatności gleby dla tej lokalizacji.</strong>
+                    {drought.unavailableReason === "classification" ? (
+                      <p>Warstwa IUNG nie przypisała działce kategorii I–IV podatności gleby. Działka lub jej część może należeć do gleby organicznej, lasu, wody, zabudowy, nieużytków, terenów komunikacyjnych albo obszaru niesklasyfikowanego.</p>
+                    ) : (
+                      <p>Usługa IUNG-PIB nie zwróciła w tym momencie prawidłowej warstwy klasyfikacji. Spróbuj ponownie później.</p>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div className="drought-metrics">
+                      <div>
+                        <span className={`drought-value drought-category-${drought.category.code}`}>{drought.category.susceptibility}</span>
+                        <small>Podatność gleby</small>
+                      </div>
+                      <div>
+                        <span className={`drought-value drought-risk-${drought.currentRisk.replaceAll(" ", "-")}`}>{drought.currentRisk}</span>
+                        <small>Wskaźnik bieżącego ryzyka</small>
+                      </div>
+                    </div>
+                    {drought.previewUrl && (
+                      <figure className="drought-preview">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={drought.previewUrl} alt="Mały wycinek mapy podatności gleby IUNG dla granic działki" />
+                        <figcaption>Wycinek mapy IUNG dla działki</figcaption>
+                      </figure>
+                    )}
+                    <div className="drought-legend" aria-label="Legenda kategorii podatności gleby IUNG">
+                      <span><i className="drought-legend-1" />I — bardzo podatna <strong>{drought.categoryPercentages["1"].toFixed(1)}%</strong></span>
+                      <span><i className="drought-legend-2" />II — podatna <strong>{drought.categoryPercentages["2"].toFixed(1)}%</strong></span>
+                      <span><i className="drought-legend-3" />III — średnio podatna <strong>{drought.categoryPercentages["3"].toFixed(1)}%</strong></span>
+                      <span><i className="drought-legend-4" />IV — mało podatna <strong>{drought.categoryPercentages["4"].toFixed(1)}%</strong></span>
+                    </div>
+                    <p className="drought-interpretation">{drought.interpretation}</p>
+                    {drought.precipitationDeficitMm !== null && drought.precipitationDeficitMm > 0 && (
+                      <p className="drought-deficit">Niedobór względem orientacyjnego progu: <strong>{drought.precipitationDeficitMm.toFixed(1)} mm</strong></p>
+                    )}
+                    <p className="drought-source">Warstwa IUNG 2024 · {drought.provider} · dane nie są bieżącym monitorowaniem suszy</p>
+                  </>
+                )
+              ) : null}
+            </section>
+          )}
+          {(satelliteLoading || satellite || satelliteError) && (
+            <section className="satellite-card" aria-live="polite" aria-label="Dane satelitarne Sentinel-2">
+              <div className="satellite-card-heading">
+                <div>
+                  <span className="satellite-kicker">SENTINEL-2 · NDVI</span>
+                  <h2>Stan roślinności działki</h2>
+                </div>
+                {satellite && <span className="satellite-source">{satellite.status === "partial" ? "częściowe pokrycie" : "L2A"}</span>}
+              </div>
+              {satelliteLoading ? (
+                <div className="satellite-status"><span className="spinner" /> Analizuję obraz Sentinel-2…</div>
+              ) : satelliteError ? (
+                <div className="satellite-error" role="alert">{satelliteError}</div>
+              ) : satellite ? (
+                satellite.status === "unavailable" ? (
+                  <p className="satellite-unavailable">Brak jakościowej obserwacji Sentinel-2 w ostatnich 90 dniach. Nie pokazano pozornego NDVI.</p>
+                ) : (
+                  <>
+                    {(satellite.currentImageUrl || satellite.historicalImageUrl) && (
+                      <div className="satellite-comparison">
+                        {satellite.currentImageUrl && (
+                          <figure>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={satellite.currentImageUrl} alt={`Obraz prawdziwokolorowy działki z ${satellite.date ?? "bieżącej obserwacji"}`} />
+                            <figcaption>Teraz · {satellite.date ?? "brak daty"}</figcaption>
+                          </figure>
+                        )}
+                        {satellite.historicalImageUrl && (
+                          <figure>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={satellite.historicalImageUrl} alt="Obraz prawdziwokolorowy działki z roku poprzedniego" />
+                            <figcaption>Rok temu · porównanie sezonowe</figcaption>
+                          </figure>
+                        )}
+                      </div>
+                    )}
+                    <div className="satellite-metrics">
+                      <div><span className="satellite-value">{satellite.ndvi?.toFixed(2) ?? "—"}</span><small>NDVI teraz</small></div>
+                      <div><span className="satellite-value">{satellite.historicalNdvi?.toFixed(2) ?? "—"}</span><small>NDVI rok temu</small></div>
+                    </div>
+                    <p className="ndvi-explanation">
+                      <strong>Co oznacza NDVI?</strong> Wskaźnik od 0 do 1 opisuje intensywność zielonego pokrycia roślin:
+                      poniżej 0,3 — słabe lub rozproszone, 0,3–0,6 — umiarkowane,
+                      powyżej 0,6 — silne. Najniższe i ujemne wartości wskazują głównie glebę, wodę lub zabudowę.
+                    </p>
+                    <p className="satellite-meta">
+                      Obserwacja: <strong>{satellite.date ?? "brak"}</strong>
+                      {" · "}chmury: <strong>{satellite.cloudCoverPercent?.toFixed(1) ?? "—"}%</strong>
+                    </p>
+                    <p className="satellite-interpretation">{satellite.interpretation}</p>
+                  </>
+                )
+              ) : null}
+            </section>
+          )}
         </div>
         <aside className="details-panel" aria-live="polite">
           <div className="panel-icon" aria-hidden="true">▧</div>
@@ -339,6 +611,38 @@ export default function Home() {
             <p className="search-help">Wpisz pełny identyfikator albo nazwę obrębu i numer.</p>
             {searchError && <p className="search-error" role="alert">{searchError}</p>}
           </form>
+          <div className="crop-select">
+            <label htmlFor="crop-type">Aktualna uprawa</label>
+            <select
+              id="crop-type"
+              value={crop}
+              onChange={(event) => {
+                const nextCrop = event.target.value;
+                setCrop(nextCrop);
+                if (parcel) {
+                  void fetchSatellite(parcel, nextCrop);
+                  if (parcel.lat != null && parcel.lng != null) {
+                    void fetchDrought(
+                      parcel.lat,
+                      parcel.lng,
+                      nextCrop,
+                      weather?.indicators.precipitationSumMm ?? null,
+                      parcel.geometry,
+                    );
+                  }
+                }
+              }}
+            >
+              <option value="zboza">Zboża</option>
+              <option value="rzepak">Rzepak</option>
+              <option value="ziemniaki">Ziemniaki</option>
+              <option value="buraki">Buraki</option>
+              <option value="kukorydza">Kukurydza</option>
+              <option value="owoce">Owoce i sad</option>
+              <option value="warzywa">Warzywa</option>
+              <option value="inna">Inna uprawa</option>
+            </select>
+          </div>
           {candidates.length > 0 && (
             <div className="candidate-list" aria-live="polite">
               <p>Znaleziono kilka działek. Wybierz właściwą:</p>
@@ -370,6 +674,10 @@ export default function Home() {
                 )}
               </dl>
               <div className="selected-badge"><span /> Działka zaznaczona na mapie</div>
+              <a className="report-button" href={reportUrl(parcel, crop)} target="_blank" rel="noopener">
+                Otwórz raport wodny działki <span aria-hidden="true">→</span>
+              </a>
+              <p className="report-button-help">W nowej karcie: pogoda, hydrologia i wskaźniki Sentinel-2 (NDVI) dla wybranej uprawy.</p>
             </>
           ) : (
             <div className="empty-state"><div className="empty-illustration" aria-hidden="true">⌖</div><p>Wskaż punkt na mapie, aby zobaczyć numer działki oraz dane gminy, powiatu i województwa.</p></div>
