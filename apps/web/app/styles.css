@@ -298,7 +298,10 @@ html[data-contrast="high"] .drought-legend i { outline: 1px solid var(--line); }
 .satellite-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .satellite-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; }
 .satellite-comparison figure { min-width: 0; margin: 0; overflow: hidden; border: var(--border-width) solid var(--line); border-radius: 10px; background: var(--map-bg); }
-.satellite-comparison img { display: block; width: 100%; height: 132px; object-fit: contain; background: repeating-conic-gradient(#edf1ee 0% 25%, #f7f9f7 0% 50%) 50% / 12px 12px; }
+.satellite-comparison figure > img { display: block; width: 100%; height: auto; }
+.satellite-image { position: relative; width: fit-content; max-width: 100%; overflow: hidden; background: var(--map-bg); }
+.satellite-image img { display: block; width: auto; max-width: 100%; height: auto; image-rendering: auto; }
+.satellite-image svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .satellite-comparison figcaption { padding: 6px 7px; color: var(--muted); font-size: .5625rem; font-weight: 700; }
 .satellite-metrics > div { display: grid; gap: 3px; min-width: 0; padding: 10px 12px; border: var(--border-width) solid var(--line); border-radius: 10px; background: var(--surface); }
 .satellite-value { color: var(--info); font: 800 1.25rem "Manrope", Arial, sans-serif; }
@@ -460,7 +463,7 @@ html[data-contrast="high"] .advice-timing, html[data-contrast="high"] .advice-ca
 .report-metric small { display: block; margin-top: 4px; color: var(--faint); font-size: .625rem; line-height: 1.35; }
 .report-note { margin: 12px 0 0; color: var(--muted); font-size: .6875rem; line-height: 1.5; }
 .report-images { margin-bottom: 12px; }
-.report-images img { height: 180px; }
+.report-images img { width: 100%; height: auto; aspect-ratio: 16 / 11; object-fit: cover; }
 .water-chart { display: flex; align-items: flex-end; gap: 3px; height: 140px; padding: 8px; border: var(--border-width) solid var(--line); border-radius: 10px; background: var(--surface-2); }
 .water-chart-wrap { position: relative; }
 .water-chart-day { display: flex; flex: 1; align-items: flex-end; gap: 1px; height: 100%; padding: 0 1px; border-radius: 4px; cursor: pointer; transition: background .15s, opacity .15s; }

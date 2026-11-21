@@ -95,6 +95,10 @@ export type SatelliteResult = {
   level: "L2A";
   currentImageUrl: string | null;
   historicalImageUrl: string | null;
+  imageBounds: [number, number, number, number] | null;
+  imageWidth: number | null;
+  imageHeight: number | null;
+  geometry: import("geojson").Geometry | null;
   date: string | null;
   cloudCoverPercent: number | null;
   resolutionMeters: number | null;

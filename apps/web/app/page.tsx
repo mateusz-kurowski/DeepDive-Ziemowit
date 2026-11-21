@@ -3,9 +3,11 @@
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
+import type { Geometry } from "geojson";
 import type { ParcelResult } from "./types";
 import type { MapFocus } from "./components/ParcelMap";
 import BrandLogo from "./components/BrandLogo";
+import SatelliteImage from "./components/SatelliteImage";
 const ParcelMap = dynamic(() => import("./components/ParcelMap"), {
   ssr: false,
   loading: () => <div className="map-loading">Ładowanie mapy…</div>,
@@ -133,6 +135,10 @@ type SatelliteResult = {
   level: "L2A";
   currentImageUrl: string | null;
   historicalImageUrl: string | null;
+  imageBounds: [number, number, number, number] | null;
+  imageWidth: number | null;
+  imageHeight: number | null;
+  geometry: Geometry | null;
   date: string | null;
   cloudCoverPercent: number | null;
   resolutionMeters: number | null;
@@ -800,14 +806,14 @@ export default function Home() {
                         {satellite.currentImageUrl && (
                           <figure>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={satellite.currentImageUrl} alt={`Obraz prawdziwokolorowy działki z ${satellite.date ?? "bieżącej obserwacji"}`} />
+                            <SatelliteImage src={satellite.currentImageUrl} alt={`Obraz prawdziwokolorowy działki z ${satellite.date ?? "bieżącej obserwacji"}`} geometry={satellite.geometry} bounds={satellite.imageBounds} imageWidth={satellite.imageWidth} imageHeight={satellite.imageHeight} />
                             <figcaption>Teraz · {satellite.date ?? "brak daty"}</figcaption>
                           </figure>
                         )}
                         {satellite.historicalImageUrl && (
                           <figure>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={satellite.historicalImageUrl} alt="Obraz prawdziwokolorowy działki z roku poprzedniego" />
+                            <SatelliteImage src={satellite.historicalImageUrl} alt="Obraz historyczny działki" geometry={satellite.geometry} bounds={satellite.imageBounds} imageWidth={satellite.imageWidth} imageHeight={satellite.imageHeight} />
                             <figcaption>Rok temu · porównanie sezonowe</figcaption>
                           </figure>
                         )}
