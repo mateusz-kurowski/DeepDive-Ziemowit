@@ -486,7 +486,6 @@ export default function Home() {
                     <p className="satellite-meta">
                       Obserwacja: <strong>{satellite.date ?? "brak"}</strong>
                       {" · "}chmury: <strong>{satellite.cloudCoverPercent?.toFixed(1) ?? "—"}%</strong>
-                      {" · "}rozdzielczość: <strong>{satellite.resolutionMeters ? `${satellite.resolutionMeters} m` : "—"}</strong>
                     </p>
                     <p className="satellite-interpretation">{satellite.interpretation}</p>
                   </>

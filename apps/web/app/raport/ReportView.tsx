@@ -257,9 +257,16 @@ export default function ReportView({ parcelId, point, crop }: {
       {summary && !detailed && (
         <section className="report-card report-block">
           <h2 className="report-title">Co warto zrobić</h2>
-          <ul className="simple-todo">
+          <ul className="simple-advice">
             {advice.slice(0, 4).map((item) => (
-              <li key={item.id}><strong>{item.title}.</strong> {item.text}</li>
+              <li key={item.id} className={`timing-${item.timing}`}>
+                <span className="advice-icon" aria-hidden="true">{item.icon}</span>
+                <div>
+                  <span className="advice-timing">{timingLabel[item.timing]}</span>
+                  <strong>{item.title}</strong>
+                  <p>{item.short}</p>
+                </div>
+              </li>
             ))}
           </ul>
         </section>
@@ -444,16 +451,14 @@ export default function ReportView({ parcelId, point, crop }: {
                 )}
               </div>
             )}
-            <div className="report-metrics report-metrics-4">
+            <div className="report-metrics compact">
               <Metric value={satellite.data.ndvi} unit="" label="NDVI teraz" digits={2} />
               <Metric value={satellite.data.historicalNdvi} unit="" label="NDVI rok temu" digits={2} />
               <Metric value={satellite.data.ndviDifference} unit="" label="Różnica rok do roku" digits={2} signed />
-              <Metric value={satellite.data.validPixelPercent} unit="%" label="Ważne piksele działki" digits={1} />
             </div>
             <p className="satellite-meta">
               Obserwacja: <strong>{satellite.data.date ?? "brak"}</strong>
               {" · "}chmury: <strong>{satellite.data.cloudCoverPercent?.toFixed(1) ?? "—"}%</strong>
-              {" · "}rozdzielczość: <strong>{satellite.data.resolutionMeters ? `${satellite.data.resolutionMeters} m` : "—"}</strong>
               {" · "}uprawa: <strong>{cropName}</strong>
             </p>
             <p className="ndvi-explanation">
