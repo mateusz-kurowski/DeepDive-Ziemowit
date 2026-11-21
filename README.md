@@ -43,12 +43,13 @@ Gdy dostawca archiwum zwróci limit lub awarię, moduł wyświetla jawny status
 
 Dane satelitarne pobiera endpoint `POST /api/satellite`. Po wskazaniu działki
 aplikacja wyszukuje w katalogu Earth Search obserwacje Sentinel-2 L2A z ostatnich
-90 dni. Najpierw odrzuca sceny z większym globalnym udziałem chmur niż 20%, a
+90 dni. Najpierw odrzuca sceny z większym globalnym udziałem chmur niż 10%, a
 następnie ocenia maksymalnie 20 kandydatów na podstawie rzeczywistej jakości
-pikseli wewnątrz granicy działki. Wynik wybiera scenę z największym udziałem
-użytecznych pikseli działki, potem o niższym globalnym zachmurzeniu i w końcu
-najnowszą obserwację. Analogiczny wybór wykonywany jest osobno dla okresu
-z poprzedniego roku. W każdym przypadku wynik liczy tylko dla pikseli
+pikseli wewnątrz granicy działki. Przyjęto próg co najmniej 70% użytecznych
+pikseli działki. Wynik wybiera scenę z największym udziałem użytecznych pikseli,
+potem o niższym globalnym zachmurzeniu i w końcu najnowszą obserwację.
+Analogiczny wybór wykonywany jest osobno dla okresu z poprzedniego roku.
+W każdym przypadku wynik liczy tylko dla pikseli
 znajdujących się wewnątrz granicy działki.
 
 #### Z czego odczytywany jest NDVI

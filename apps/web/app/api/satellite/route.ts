@@ -87,6 +87,11 @@ function pointInGeometry(x: number, y: number, geometry: Geometry | null): boole
   return coordinates.some((polygon) => pointInRing(x, y, polygon[0]));
 }
 
+function isUsableSclPixel(sclClass: number | undefined): boolean {
+  if (sclClass == null) return true;
+  return ![0, 1, 2, 3, 7, 8, 9, 10, 11].includes(sclClass);
+}
+
 async function searchScenes(bbox: [number, number, number, number], start: string, end: string): Promise<StacFeature[]> {
   const response = await fetch("https://earth-search.aws.element84.com/v1/search", {
     method: "POST",
@@ -95,7 +100,7 @@ async function searchScenes(bbox: [number, number, number, number], start: strin
       collections: ["sentinel-2-l2a"],
       bbox,
       datetime: `${start}T00:00:00Z/${end}T23:59:59Z`,
-      query: { "eo:cloud_cover": { "lt": 20 } },
+      query: { "eo:cloud_cover": { "lt": 10 } },
       sortby: [{ field: "properties.datetime", direction: "desc" }],
       limit: 20,
     }),
@@ -205,7 +210,7 @@ async function calculateNdvi(
         const sclY = Math.floor((sclOrigin[1] - nativeY) / -sclResolution[1]);
         const sclIndex = (sclY - sclTop) * sclWidth + (sclX - sclLeft);
         const sclClass = sclValues[sclIndex];
-        if (sclClass === 3 || sclClass === 8 || sclClass === 9 || sclClass === 10) continue;
+        if (!isUsableSclPixel(sclClass)) continue;
       }
       const index = (y - top) * (right - left) + (x - left);
       const redRaw = redValues[index];
@@ -265,6 +270,34 @@ async function createParcelImage(
     const bottom = Math.min(image.getHeight(), Math.ceil((origin[1] - Math.min(minYNative, maxYNative)) / -pixelYSize));
     if (right <= left || bottom <= top) return null;
 
+    let sclValues: ArrayLike<number> | null = null;
+    let sclOrigin: number[] | null = null;
+    let sclResolution: number[] | null = null;
+    let sclLeft = 0;
+    let sclTop = 0;
+    let sclWidth = 0;
+    if (item.assets.scl?.href) {
+      try {
+        const sclTiff = await fromUrl(item.assets.scl.href);
+        const sclImage = await sclTiff.getImage();
+        sclOrigin = sclImage.getOrigin();
+        sclResolution = sclImage.getResolution();
+        sclLeft = Math.max(0, Math.floor((Math.min(minXNative, maxXNative) - sclOrigin[0]) / sclResolution[0]));
+        const sclRight = Math.min(sclImage.getWidth(), Math.ceil((Math.max(minXNative, maxXNative) - sclOrigin[0]) / sclResolution[0]));
+        sclTop = Math.max(0, Math.floor((sclOrigin[1] - Math.max(minYNative, maxYNative)) / -sclResolution[1]));
+        const sclBottom = Math.min(sclImage.getHeight(), Math.ceil((sclOrigin[1] - Math.min(minYNative, maxYNative)) / -sclResolution[1]));
+        sclWidth = sclRight - sclLeft;
+        const sclRaster = await sclImage.readRasters({
+          window: [sclLeft, sclTop, sclRight, sclBottom],
+          samples: [0],
+          interleave: false,
+        }) as unknown as Array<ArrayLike<number>>;
+        sclValues = sclRaster[0];
+      } catch {
+        sclValues = null;
+      }
+    }
+
     const width = right - left;
     const height = bottom - top;
     const raster = await image.readRasters({
@@ -283,10 +316,17 @@ async function createParcelImage(
         const nativeY = origin[1] + (top + y + 0.5) * pixelYSize;
         const [lng, lat] = transformer.inverse([nativeX, nativeY]) as number[];
         const insideParcel = pointInGeometry(lng, lat, geometry);
+        let usable = insideParcel;
+        if (insideParcel && sclValues && sclOrigin && sclResolution) {
+          const sclX = Math.floor((nativeX - sclOrigin[0]) / sclResolution[0]);
+          const sclY = Math.floor((sclOrigin[1] - nativeY) / -sclResolution[1]);
+          const sclIndex = (sclY - sclTop) * sclWidth + (sclX - sclLeft);
+          usable = isUsableSclPixel(sclValues[sclIndex]);
+        }
         rgba[targetIndex] = pixels[sourceIndex] > 255 ? Math.round(pixels[sourceIndex] / 256) : pixels[sourceIndex];
         rgba[targetIndex + 1] = pixels[sourceIndex + 1] > 255 ? Math.round(pixels[sourceIndex + 1] / 256) : pixels[sourceIndex + 1];
         rgba[targetIndex + 2] = pixels[sourceIndex + 2] > 255 ? Math.round(pixels[sourceIndex + 2] / 256) : pixels[sourceIndex + 2];
-        rgba[targetIndex + 3] = insideParcel ? 255 : 0;
+        rgba[targetIndex + 3] = usable ? 255 : 0;
       }
     }
 
@@ -327,7 +367,11 @@ async function selectBestScene(
   });
 
   const best = evaluated[0];
-  return best.metrics.ndvi === null ? { item: null, metrics: null } : best;
+  const coverage = best.metrics.validPixelPercent;
+  if (best.metrics.ndvi === null || coverage === null || coverage < 70) {
+    return { item: null, metrics: null };
+  }
+  return best;
 }
 
 function interpret(ndvi: number | null, difference: number | null, crop: string, weatherAvailable: boolean): string {
@@ -420,8 +464,8 @@ export async function POST(request: Request) {
         ndviDifference: null,
         validPixelPercent: null,
         crop,
-        interpretation: "Brak jakościowej obserwacji Sentinel-2 bez chmur w ostatnich 90 dniach.",
-        limitations: ["Zakres chmur: poniżej 20% dla sceny.", "Brak pokrycia może wynikać z chmur, sezonu lub braku danych."],
+        interpretation: "Brak jakościowej obserwacji Sentinel-2 nad działką w ostatnich 90 dniach.",
+        limitations: ["Scena musi mieć mniej niż 10% chmur oraz co najmniej 70% użytecznych pikseli działki.", "Brak pokrycia może wynikać z chmur, cieni, cirrusów lub braku danych."],
       };
       cache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL_MS, value: unavailable });
       return NextResponse.json(unavailable);
