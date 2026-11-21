@@ -119,3 +119,41 @@ Interpretacja opiera się na połączeniu danych satelitarnych z meteo, natomias
 aplikacja nie posiada jeszcze pełnych danych o glebie i ukształtowaniu terenu.
 Gdy nie ma jakościowej sceny, brak danych i chmury są komunikowane wprost —
 nie wyświetlany jest pozornie precyzyjny wynik.
+
+### Dane o podatności gleby na suszę
+
+Dla każdej wybranej działki aplikacja pobiera warstwę IUNG-PIB
+`Susza:katgl_landuse2024` przez usługę WMS. Punkt działki jest
+przekształcany z EPSG:4326 do układu EPSG:2180, a usługa `GetFeatureInfo`
+zwraca mapę klasyfikacji. Aplikacja pobiera raster tej warstwy dla granic
+działki i analizuje piksele znajdujące się wewnątrz działki. Następnie
+wybiera kategorię dominującą, zamiast opierać wynik wyłącznie na jednym
+punkcie centroidu:
+
+- I — bardzo podatna na suszę,
+- II — podatna,
+- III — średnio podatna,
+- IV — mało podatna,
+- gleby organiczne i inne obszary mogą mieć osobne klasy bez oceny suszy.
+
+Jeżeli działka nie ma kategorii I–IV, komunikat „brak danych” oznacza, że
+warstwa IUNG przypisała jej obszar do klasy spoza kategorii podatności gleby,
+np. gleby organiczne, las, wodę, zabudowę, nieużytki lub obszar
+niesklasyfikowany. Jeśli usługa IUNG nie odpowiada lub zwraca błąd, aplikacja
+podaje osobny komunikat o niedostępności warstwy. Brak kategorii nie oznacza
+„niskej podatności” ani potwierdzonego braku suszy.
+
+Warstwa IUNG opisuje **podatność gleby**, a nie bieżące zagrożenie suszą.
+Karta aplikacji zestawia ją z sumą opadów z ostatnich 30 dni pobieraną
+przez Open-Meteo oraz orientacyjnym minimum opadów dla wyboru uprawy.
+Wpływ różnych źródeł jest przedstawiony jawnie:
+
+- IUNG dostarcza podatność gleby;
+- Open-Meteo dostarcza bieżące i historyczne opady;
+- wybór uprawy pozwala dodać orientacyjny profil potrzeb wodnych;
+- satelitarny NDVI opisuje stan roślinności, ale nie zastępuje pomiaru wilgotności.
+
+Wartości orientacyjnych progów opadów nie należy traktować jako oficjalnego
+progowego kryterium IUNG dla konkretnego terminu uprawy. Wynik służy do
+prostej oceny ryzyka i nie zastępuje pomiarów gleby, bilansu wodnego ani
+Systemu Monitoringu Suszy Rolniczej.
