@@ -53,12 +53,71 @@ function parseWktGeometry(wkt: string): Geometry | null {
   };
 }
 
+function parseParcelRow(row: string) {
+  const [id, parcel, commune, county, voivodeship, ...geometryParts] = row.split("|");
+  if (!id || !voivodeship) return null;
+
+  let geometry: Geometry | null = null;
+  try {
+    geometry = parseWktGeometry(geometryParts.join("|"));
+  } catch {
+    geometry = null;
+  }
+
+  return { id, parcel: parcel || id.split(".").at(-1) || "Nieznany", commune, county, voivodeship, geometry };
+}
+
 export async function POST(request: Request) {
-  let body: { lat?: unknown; lng?: unknown };
+  let body: { lat?: unknown; lng?: unknown; identifier?: unknown };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Niepoprawne dane punktu." }, { status: 400 });
+  }
+
+  if (typeof body.identifier === "string") {
+    const identifier = body.identifier.trim();
+    if (!identifier || identifier.length > 160 || /[\r\n\u0000-\u001f]/.test(identifier)) {
+      return NextResponse.json({ error: "Wpisz poprawny identyfikator działki." }, { status: 400 });
+    }
+    if (/^\d+(?:\/\d+)*$/.test(identifier)) {
+      return NextResponse.json({ error: "Sam numer działki nie wystarczy. Wpisz pełny identyfikator albo nazwę obrębu i numer, np. „Krzewina 134”." }, { status: 400 });
+    }
+
+    const query = new URLSearchParams({
+      request: "GetParcelByIdOrNr",
+      id: identifier,
+      result: "id,parcel,commune,county,voivodeship,geom_wkt",
+      srid: "4326",
+    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+    try {
+      const response = await fetch(`https://uldk.gugik.gov.pl/?${query}`, {
+        signal: controller.signal,
+        headers: { Accept: "text/plain" },
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error("ULDK niedostępne");
+      const lines = (await response.text()).trim().split(/\r?\n/);
+      const count = Number(lines[0]);
+      if (!Number.isFinite(count) || count < 1) {
+        return NextResponse.json({ error: "Nie znaleziono działki. Sprawdź identyfikator lub nazwę obrębu." }, { status: 404 });
+      }
+
+      const parcels = lines.slice(1).map(parseParcelRow).filter((parcel) => parcel !== null);
+      if (parcels.length === 0) {
+        return NextResponse.json({ error: "ULDK nie zwrócił poprawnych danych działki." }, { status: 502 });
+      }
+      return NextResponse.json({ parcels });
+    } catch (error) {
+      const message = error instanceof Error && error.name === "AbortError"
+        ? "Usługa lokalizacji działek odpowiada zbyt długo. Spróbuj ponownie za chwilę."
+        : "Nie można teraz połączyć się z usługą GUGiK. Spróbuj ponownie za chwilę.";
+      return NextResponse.json({ error: message }, { status: 502 });
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   const lat = Number(body.lat);
@@ -90,19 +149,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Nie znaleziono działki w tym miejscu. Spróbuj kliknąć wewnątrz innej działki." }, { status: 404 });
     }
 
-    const [id, parcel, commune, county, voivodeship, ...geometryParts] = row.split("|");
-    if (!id || !voivodeship) {
+    const parcel = parseParcelRow(row);
+    if (!parcel) {
       return NextResponse.json({ error: "W tym miejscu nie znaleziono działki w granicach Polski." }, { status: 404 });
     }
-
-    let geometry: Geometry | null = null;
-    try {
-      geometry = parseWktGeometry(geometryParts.join("\t"));
-    } catch {
-      geometry = null;
-    }
-
-    return NextResponse.json({ id, parcel: parcel || id.split(".").at(-1) || "Nieznany", commune, county, voivodeship, geometry });
+    return NextResponse.json(parcel);
   } catch (error) {
     const message = error instanceof Error && error.name === "AbortError"
       ? "Usługa lokalizacji działek odpowiada zbyt długo. Spróbuj ponownie za chwilę."
