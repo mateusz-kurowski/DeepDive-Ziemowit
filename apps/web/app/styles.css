@@ -119,9 +119,28 @@ footer { padding: 20px 4px 0; color: #88928c; font-size: 11px; }
 .report-metric small { display: block; margin-top: 4px; color: #7b8c82; font-size: 10px; line-height: 1.35; }
 .report-note { margin: 12px 0 0; color: #668170; font-size: 11px; line-height: 1.5; }
 .water-chart { display: flex; align-items: flex-end; gap: 3px; height: 140px; padding: 8px; border: 1px solid #e6eee9; border-radius: 10px; background: #fbfdfc; }
-.water-chart-day { display: flex; flex: 1; align-items: flex-end; gap: 1px; height: 100%; border-radius: 3px; }
+.water-chart-wrap { position: relative; }
+.water-chart-day { display: flex; flex: 1; align-items: flex-end; gap: 1px; height: 100%; padding: 0 1px; border-radius: 4px; cursor: pointer; transition: background .15s, opacity .15s; }
 .water-chart-day.forecast { background: #eef1f6; }
-.bar { flex: 1; min-height: 1px; border-radius: 2px 2px 0 0; }
+.water-chart.has-active .water-chart-day:not(.active) { opacity: .45; }
+.water-chart-day.active { background: #e3efe8; }
+.bar { flex: 1; min-height: 1px; border-radius: 2px 2px 0 0; transition: filter .15s; }
+.water-chart-day.active .bar { filter: saturate(1.25) brightness(1.05); }
+.chart-tooltip { position: absolute; bottom: calc(100% + 10px); z-index: 5; min-width: 168px; padding: 10px 12px; border-radius: 12px; background: #18251f; color: #e9f1ec; box-shadow: 0 12px 28px #0b1f1440; font-size: 11px; pointer-events: none; transform: translateX(-50%); animation: tooltip-in .12s ease-out; }
+.chart-tooltip::after { content: ""; position: absolute; top: 100%; left: 50%; border: 6px solid transparent; border-top-color: #18251f; transform: translateX(-50%); }
+.chart-tooltip.align-left { transform: translateX(-14px); }
+.chart-tooltip.align-left::after { left: 14px; }
+.chart-tooltip.align-right { transform: translateX(calc(-100% + 14px)); }
+.chart-tooltip.align-right::after { left: calc(100% - 14px); }
+.chart-tooltip-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 7px; color: white; font: 700 12px "Manrope", Arial, sans-serif; }
+.chart-tooltip-head span { white-space: nowrap; }
+.chart-tooltip-head em { padding: 2px 6px; border-radius: 999px; background: #3a4a60; color: #cfdcf0; font-size: 9px; font-style: normal; font-weight: 700; }
+.chart-tooltip-row { display: flex; align-items: center; gap: 6px; padding: 2px 0; color: #b9c8bf; }
+.chart-tooltip-row strong, .chart-tooltip-balance strong { margin-left: auto; color: white; }
+.chart-tooltip-balance { display: flex; gap: 6px; margin-top: 7px; padding-top: 7px; border-top: 1px solid #ffffff1f; color: #b9c8bf; }
+.chart-tooltip-balance.positive strong { color: #7fd6a5; }
+.chart-tooltip-balance.negative strong { color: #f2b766; }
+@keyframes tooltip-in { from { opacity: 0; margin-bottom: -4px; } to { opacity: 1; margin-bottom: 0; } }
 .bar.precipitation, .legend.precipitation { background: #3c86c4; }
 .bar.evaporation, .legend.evaporation { background: #e0a43a; }
 .legend.forecast { background: #e3e8f0; }

@@ -111,8 +111,6 @@ export default function ReportView({ parcelId, point }: { parcelId: string; poin
     [dataLoading, weatherData, hydroData],
   );
 
-  const chartMax = Math.max(1, ...(hydroData?.daily ?? []).flatMap((day) => [day.precipitationMm ?? 0, day.et0Mm ?? 0]));
-
   return (
     <main className="app-shell report-shell">
       <div className="report-toolbar">
@@ -227,14 +225,7 @@ export default function ReportView({ parcelId, point }: { parcelId: string; poin
             </div>
 
             <h3 className="report-subtitle">Opad i parowanie dzień po dniu</h3>
-            <div className="water-chart" role="img" aria-label="Wykres dziennych opadów i parowania">
-              {hydro.data.daily.map((day) => (
-                <div key={day.date} className={`water-chart-day${day.forecast ? " forecast" : ""}`} title={`${day.date}: opad ${day.precipitationMm ?? "—"} mm, parowanie ${day.et0Mm ?? "—"} mm${day.forecast ? " (prognoza)" : ""}`}>
-                  <span className="bar precipitation" style={{ height: `${((day.precipitationMm ?? 0) / chartMax) * 100}%` }} />
-                  <span className="bar evaporation" style={{ height: `${((day.et0Mm ?? 0) / chartMax) * 100}%` }} />
-                </div>
-              ))}
-            </div>
+            <WaterChart days={hydro.data.daily} />
             <div className="chart-legend">
               <span><i className="legend precipitation" /> Opad</span>
               <span><i className="legend evaporation" /> Parowanie ET₀</span>
@@ -288,6 +279,56 @@ export default function ReportView({ parcelId, point }: { parcelId: string; poin
 
       <footer>Źródła: GUGiK ULDK, Open-Meteo, GloFAS (Copernicus), IMGW-PIB. Mapa © OpenStreetMap.</footer>
     </main>
+  );
+}
+
+const dayFormatter = new Intl.DateTimeFormat("pl-PL", { weekday: "short", day: "numeric", month: "long" });
+
+function formatChartDay(date: string) {
+  const text = dayFormatter.format(new Date(`${date}T12:00:00`));
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function WaterChart({ days }: { days: HydroResult["daily"] }) {
+  const [active, setActive] = useState<number | null>(null);
+  const max = Math.max(1, ...days.flatMap((day) => [day.precipitationMm ?? 0, day.et0Mm ?? 0]));
+  const day = active === null ? null : days[active];
+  const balance = day && day.precipitationMm !== null && day.et0Mm !== null
+    ? Math.round((day.precipitationMm - day.et0Mm) * 10) / 10
+    : null;
+  const edge = active === null ? "" : active < 4 ? " align-left" : active > days.length - 5 ? " align-right" : "";
+
+  return (
+    <div className="water-chart-wrap" onMouseLeave={() => setActive(null)}>
+      <div className={`water-chart${active !== null ? " has-active" : ""}`} role="img" aria-label="Wykres dziennych opadów i parowania">
+        {days.map((item, index) => (
+          <div
+            key={item.date}
+            className={`water-chart-day${item.forecast ? " forecast" : ""}${index === active ? " active" : ""}`}
+            onMouseEnter={() => setActive(index)}
+            onClick={() => setActive(index)}
+          >
+            <span className="bar precipitation" style={{ height: `${((item.precipitationMm ?? 0) / max) * 100}%` }} />
+            <span className="bar evaporation" style={{ height: `${((item.et0Mm ?? 0) / max) * 100}%` }} />
+          </div>
+        ))}
+      </div>
+      {day && active !== null && (
+        <div className={`chart-tooltip${edge}`} style={{ left: `calc(8px + (100% - 16px) * ${(active + 0.5) / days.length})` }}>
+          <div className="chart-tooltip-head">
+            <span>{formatChartDay(day.date)}</span>
+            {day.forecast && <em>Prognoza</em>}
+          </div>
+          <div className="chart-tooltip-row"><i className="legend precipitation" /> Opad <strong>{day.precipitationMm ?? "—"} mm</strong></div>
+          <div className="chart-tooltip-row"><i className="legend evaporation" /> Parowanie <strong>{day.et0Mm ?? "—"} mm</strong></div>
+          {balance !== null && (
+            <div className={`chart-tooltip-balance ${balance >= 0 ? "positive" : "negative"}`}>
+              Bilans dnia <strong>{balance > 0 ? "+" : ""}{balance} mm</strong>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
