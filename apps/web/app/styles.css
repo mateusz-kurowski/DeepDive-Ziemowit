@@ -41,9 +41,10 @@ h1 { margin-bottom: 5px; font: 800 29px/1.2 "Manrope", Arial, sans-serif; letter
 .satellite-kicker { color: #687b8a; font-size: 9px; font-weight: 800; letter-spacing: .09em; }
 .satellite-source { padding: 5px 8px; border-radius: 999px; background: white; color: #637789; font-size: 9px; font-weight: 700; box-shadow: 0 2px 8px #20472f0c; }
 .satellite-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.satellite-preview { position: relative; display: block; height: 132px; margin-bottom: 8px; overflow: hidden; border: 1px solid #dfe8ed; border-radius: 10px; background: #dfe8ed; }
-.satellite-preview img { width: 100%; height: 100%; object-fit: cover; }
-.satellite-preview span { position: absolute; right: 7px; bottom: 7px; padding: 5px 7px; border-radius: 7px; background: rgba(24, 37, 31, .82); color: white; font-size: 9px; font-weight: 700; }
+.satellite-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; }
+.satellite-comparison figure { min-width: 0; margin: 0; overflow: hidden; border: 1px solid #dfe8ed; border-radius: 10px; background: #eef3ef; }
+.satellite-comparison img { display: block; width: 100%; height: 132px; object-fit: contain; background: repeating-conic-gradient(#edf1ee 0% 25%, #f7f9f7 0% 50%) 50% / 12px 12px; }
+.satellite-comparison figcaption { padding: 6px 7px; color: #65766c; font-size: 9px; font-weight: 700; }
 .satellite-metrics > div { display: grid; gap: 3px; min-width: 0; padding: 10px 12px; border: 1px solid #dfe8ed; border-radius: 10px; background: rgba(255, 255, 255, .82); }
 .satellite-value { color: #345c78; font: 800 20px "Manrope", Arial, sans-serif; }
 .satellite-metrics small { color: #7b8c82; font-size: 9px; }

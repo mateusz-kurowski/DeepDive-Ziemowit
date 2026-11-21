@@ -33,7 +33,8 @@ type SatelliteResult = {
   provider: "Earth Search";
   satellite: "Sentinel-2";
   level: "L2A";
-  thumbnailUrl: string | null;
+  currentImageUrl: string | null;
+  historicalImageUrl: string | null;
   date: string | null;
   cloudCoverPercent: number | null;
   resolutionMeters: number | null;
@@ -314,12 +315,23 @@ export default function Home() {
                   <p className="satellite-unavailable">Brak jakościowej obserwacji Sentinel-2 w ostatnich 90 dniach. Nie pokazano pozornego NDVI.</p>
                 ) : (
                   <>
-                    {satellite.thumbnailUrl && (
-                      <a className="satellite-preview" href={satellite.thumbnailUrl} target="_blank" rel="noreferrer" title="Otwórz podgląd obrazu Sentinel-2">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={satellite.thumbnailUrl} alt={`Obraz Sentinel-2 z dnia ${satellite.date ?? "nieznana data"}`} />
-                        <span>Obraz Sentinel-2 ↗</span>
-                      </a>
+                    {(satellite.currentImageUrl || satellite.historicalImageUrl) && (
+                      <div className="satellite-comparison">
+                        {satellite.currentImageUrl && (
+                          <figure>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={satellite.currentImageUrl} alt={`Obraz prawdziwokolorowy działki z ${satellite.date ?? "bieżącej obserwacji"}`} />
+                            <figcaption>Teraz · {satellite.date ?? "brak daty"}</figcaption>
+                          </figure>
+                        )}
+                        {satellite.historicalImageUrl && (
+                          <figure>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={satellite.historicalImageUrl} alt="Obraz prawdziwokolorowy działki z roku poprzedniego" />
+                            <figcaption>Rok temu · porównanie sezonowe</figcaption>
+                          </figure>
+                        )}
+                      </div>
                     )}
                     <div className="satellite-metrics">
                       <div><span className="satellite-value">{satellite.ndvi?.toFixed(2) ?? "—"}</span><small>NDVI teraz</small></div>

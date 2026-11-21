@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { fromUrl } from "geotiff";
 import proj4 from "proj4";
+import sharp from "sharp";
 
 export const runtime = "nodejs";
 
@@ -28,7 +29,8 @@ type SatelliteResult = {
   provider: "Earth Search";
   satellite: "Sentinel-2";
   level: "L2A";
-  thumbnailUrl: string | null;
+  currentImageUrl: string | null;
+  historicalImageUrl: string | null;
   date: string | null;
   cloudCoverPercent: number | null;
   resolutionMeters: number | null;
@@ -191,6 +193,71 @@ async function calculateNdvi(
   };
 }
 
+async function createParcelImage(
+  item: StacFeature,
+  geometry: Geometry | null,
+  bbox: [number, number, number, number],
+): Promise<string | null> {
+  const visualAsset = item.assets.visual;
+  const epsg = item.properties["proj:epsg"];
+  if (!visualAsset?.href || !epsg) return null;
+
+  try {
+    const tiff = await fromUrl(visualAsset.href);
+    const image = await tiff.getImage();
+    const origin = image.getOrigin();
+    const resolution = image.getResolution();
+    const transformer = proj4(
+      "EPSG:4326",
+      epsg === 32734 || epsg === 32735
+        ? `+proj=utm +zone=${epsg - 32700} +south +datum=WGS84 +units=m +no_defs`
+        : `+proj=utm +zone=${epsg - 32600} +datum=WGS84 +units=m +no_defs`,
+    );
+
+    const [minXNative, minYNative] = transformer.forward([bbox[0], bbox[1]]) as number[];
+    const [maxXNative, maxYNative] = transformer.forward([bbox[2], bbox[3]]) as number[];
+    const pixelXSize = resolution[0];
+    const pixelYSize = resolution[1];
+    const left = Math.max(0, Math.floor((Math.min(minXNative, maxXNative) - origin[0]) / pixelXSize));
+    const right = Math.min(image.getWidth(), Math.ceil((Math.max(minXNative, maxXNative) - origin[0]) / pixelXSize));
+    const top = Math.max(0, Math.floor((origin[1] - Math.max(minYNative, maxYNative)) / -pixelYSize));
+    const bottom = Math.min(image.getHeight(), Math.ceil((origin[1] - Math.min(minYNative, maxYNative)) / -pixelYSize));
+    if (right <= left || bottom <= top) return null;
+
+    const width = right - left;
+    const height = bottom - top;
+    const raster = await image.readRasters({
+      window: [left, top, right, bottom],
+      interleave: true,
+      samples: [0, 1, 2],
+    });
+    const pixels = raster as unknown as Uint8Array | Uint16Array;
+    const rgba = new Uint8Array(width * height * 4);
+
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const sourceIndex = (y * width + x) * 3;
+        const targetIndex = (y * width + x) * 4;
+        const nativeX = origin[0] + (left + x + 0.5) * pixelXSize;
+        const nativeY = origin[1] + (top + y + 0.5) * pixelYSize;
+        const [lng, lat] = transformer.inverse([nativeX, nativeY]) as number[];
+        const insideParcel = pointInGeometry(lng, lat, geometry);
+        rgba[targetIndex] = pixels[sourceIndex] > 255 ? Math.round(pixels[sourceIndex] / 256) : pixels[sourceIndex];
+        rgba[targetIndex + 1] = pixels[sourceIndex + 1] > 255 ? Math.round(pixels[sourceIndex + 1] / 256) : pixels[sourceIndex + 1];
+        rgba[targetIndex + 2] = pixels[sourceIndex + 2] > 255 ? Math.round(pixels[sourceIndex + 2] / 256) : pixels[sourceIndex + 2];
+        rgba[targetIndex + 3] = insideParcel ? 255 : 0;
+      }
+    }
+
+    const png = await sharp(Buffer.from(rgba), {
+      raw: { width, height, channels: 4 },
+    }).resize({ width: 320, height: 220, fit: "inside", withoutEnlargement: true }).png().toBuffer();
+    return `data:image/png;base64,${png.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
+
 function interpret(ndvi: number | null, difference: number | null, crop: string, weatherAvailable: boolean): string {
   if (ndvi === null) return "Nie udało się odczytać wartości roślinności z dostępnej obserwacji.";
   const cropNames: Record<string, string> = {
@@ -268,7 +335,8 @@ export async function POST(request: Request) {
         provider: "Earth Search",
         satellite: "Sentinel-2",
         level: "L2A",
-        thumbnailUrl: null,
+        currentImageUrl: null,
+        historicalImageUrl: null,
         date: null,
         cloudCoverPercent: null,
         resolutionMeters: null,
@@ -290,13 +358,18 @@ export async function POST(request: Request) {
     const difference = current.ndvi !== null && historical !== null && historical.ndvi !== null
       ? Number((current.ndvi - historical.ndvi).toFixed(3))
       : null;
+    const [currentImageUrl, historicalImageUrl] = await Promise.all([
+      createParcelImage(currentItem, geometry, bbox),
+      historicalItem ? createParcelImage(historicalItem, geometry, bbox) : Promise.resolve(null),
+    ]);
 
     const result: SatelliteResult = {
       status: current.validPixelPercent !== null && current.validPixelPercent < 70 ? "partial" : "available",
       provider: "Earth Search",
       satellite: "Sentinel-2",
       level: "L2A",
-      thumbnailUrl: currentItem.assets.thumbnail?.href ?? null,
+      currentImageUrl,
+      historicalImageUrl,
       date: currentItem.properties.datetime?.slice(0, 10) ?? null,
       cloudCoverPercent: currentItem.properties["eo:cloud_cover"] != null
         ? Number(currentItem.properties["eo:cloud_cover"].toFixed(2))
