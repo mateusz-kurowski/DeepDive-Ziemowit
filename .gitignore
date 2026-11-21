@@ -1,1 +1,12 @@
 .github
+
+# dependencies
+node_modules/
+.next/
+
+# environment
+.env
+.env.local
+
+# logs
+npm-debug.log*

@@ -1,0 +1,12 @@
+{
+  "name": "hacknation-2026-proj2",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=web",
+    "build": "npm run build --workspace=web",
+    "start": "npm run start --workspace=web"
+  }
+}
