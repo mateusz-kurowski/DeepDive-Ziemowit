@@ -218,6 +218,24 @@ h1 { margin-bottom: 5px; font: 800 1.8125rem/1.2 "Manrope", Arial, sans-serif; l
 .soil-silt { background: #739b70; }
 .soil-clay { background: #a56c56; }
 .soil-unavailable { padding: 10px 12px; border: var(--border-width) solid var(--warn); border-radius: 9px; background: var(--warn-bg); color: var(--ink-2); font-size: .6875rem; line-height: 1.45; }
+.terrain-flow-section { margin-top: 16px; padding-top: 15px; border-top: var(--border-width) solid var(--line); }
+.terrain-flow-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.terrain-flow-heading h3 { margin: 3px 0 0; font: 700 .8125rem "Manrope", Arial, sans-serif; color: var(--ink); }
+.terrain-flow-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.terrain-flow-summary > div { display: grid; gap: 4px; min-width: 0; padding: 10px 12px; border: var(--border-width) solid var(--line); border-radius: 10px; background: var(--surface-2); }
+.terrain-flow-summary small { color: var(--muted); font-size: .5625rem; line-height: 1.35; }
+.terrain-flow-summary strong { color: var(--accent-text); font: 800 1.125rem "Manrope", Arial, sans-serif; }
+.terrain-flow-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.terrain-flow-groups > div { min-width: 0; padding: 11px 12px; border: var(--border-width) solid var(--line); border-radius: 10px; background: var(--surface); }
+.terrain-flow-groups > div > strong { color: var(--ink-2); font-size: .625rem; }
+.terrain-flow-groups ul { display: grid; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
+.terrain-flow-groups li { display: flex; justify-content: space-between; gap: 8px; color: var(--ink-2); font-size: .5625rem; line-height: 1.4; }
+.terrain-flow-groups li span:last-child { color: var(--muted); text-align: right; }
+.terrain-flow-groups p { margin: 7px 0 0; color: var(--muted); font-size: .625rem; line-height: 1.45; }
+.terrain-flow-note { margin: 9px 0 0; color: var(--muted); font-size: .625rem; line-height: 1.5; }
+.terrain-flow-limitations { margin-top: 8px; color: var(--muted); font-size: .625rem; }
+.terrain-flow-limitations summary { cursor: pointer; color: var(--accent-text); font-weight: 700; }
+.terrain-flow-limitations p { margin: 6px 0 0; line-height: 1.5; }
 .drought-card { margin: 0 16px 16px; padding: 16px 18px; border: var(--border-width) solid var(--line); border-radius: 14px; background: var(--warn-bg); }
 .drought-card-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 13px; }
 .drought-card-heading h2 { margin: 3px 0 0; font: 700 .875rem "Manrope", Arial, sans-serif; }
@@ -486,7 +504,9 @@ html[data-contrast="high"] .station-status { border-color: currentColor; }
 @media (max-width: 900px) { .app-shell { padding: 26px 22px; } .workspace { grid-template-columns: minmax(0, 1fr) 290px; } }
 @media (max-width: 700px) { .app-shell { padding: 64px 14px 22px; } .page-header { gap: 12px; margin-bottom: 22px; } .brand-mark { width: 46px; height: 46px; } h1 { font-size: 1.375rem; } .workspace { grid-template-columns: 1fr; } .map-frame, .map-loading { height: 52vh; min-height: 360px; } .details-panel { min-height: 270px; } .map-heading { gap: 10px; padding: 18px 16px 14px; } .map-heading h2 { font-size: .9375rem; } .map-heading p { font-size: .6875rem; } .map-hint { font-size: .625rem; } .report-toolbar { padding-right: 0; } .hero { margin-top: 0; padding: 22px 18px; border-radius: 18px; } .hero-brand { gap: 14px; } .hero-logo { width: 56px; height: 56px; } .brand-name { font-size: 2.125rem; } .brand-slogan { font-size: 1rem; } .hero-steps { flex-direction: column; } .report-toolbar { flex-wrap: wrap; gap: 12px; } }
 @media (max-width: 900px) { .soil-fractions { grid-template-columns: 1fr; } }
-@media (max-width: 760px) { .advice-list, .finding-grid { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .terrain-flow-groups { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .terrain-flow-summary { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .advice-list, .finding-grid, .simple-advice { grid-template-columns: 1fr; } }
 @media (max-width: 560px) { .simple-tiles { grid-template-columns: 1fr; } .simple-more { flex-direction: column; align-items: stretch; } }
 @media print {
   html, html[data-theme], html[data-contrast] {
