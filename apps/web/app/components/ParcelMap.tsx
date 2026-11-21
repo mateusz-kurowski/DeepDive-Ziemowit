@@ -12,9 +12,12 @@ function LimitToPoland() {
   const map = useMap();
   useEffect(() => {
     const updateMinZoom = () => {
-      const zoom = map.getBoundsZoom(POLAND_BOUNDS, true);
+      const zoom = map.getBoundsZoom(POLAND_BOUNDS, false);
       map.setMinZoom(zoom);
-      if (map.getZoom() < zoom) map.setZoom(zoom);
+      map.fitBounds(POLAND_BOUNDS, {
+        animate: false,
+        padding: [8, 8],
+      });
     };
     updateMinZoom();
     map.on("resize", updateMinZoom);
@@ -57,7 +60,6 @@ export default function ParcelMap({ onSelectPoint, parcel, className = "map-fram
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          bounds={POLAND_BOUNDS}
           maxZoom={19}
         />
         <LimitToPoland />
