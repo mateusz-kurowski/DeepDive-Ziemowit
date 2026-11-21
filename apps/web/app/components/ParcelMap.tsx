@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import * as L from "leaflet";
-import { MapContainer, TileLayer, useMap, useMapEvents, GeoJSON } from "react-leaflet";
+import { MapContainer, TileLayer, useMap, useMapEvents, GeoJSON, CircleMarker } from "react-leaflet";
 import type { Geometry } from "geojson";
 import type { ParcelResult } from "../types";
 
@@ -33,6 +33,13 @@ export default function ParcelMap({ onSelectPoint, parcel }: {
         <MapClick onSelectPoint={onSelectPoint} />
         <FitParcel parcel={parcel} />
         {parcel?.geometry && <GeoJSON key={parcel.id} data={parcel.geometry as Geometry} style={{ color: "#16805b", weight: 3, fillColor: "#36b37e", fillOpacity: 0.25 }} />}
+        {parcel?.lat != null && parcel?.lng != null && (
+          <CircleMarker
+            center={[parcel.lat, parcel.lng]}
+            radius={7}
+            pathOptions={{ color: "#ffffff", fillColor: "#d97706", fillOpacity: 1, weight: 2 }}
+          />
+        )}
       </MapContainer>
     </div>
   );

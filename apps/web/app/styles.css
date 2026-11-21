@@ -48,6 +48,7 @@ h1 { margin-bottom: 5px; font: 800 29px/1.2 "Manrope", Arial, sans-serif; letter
 .parcel-data div { padding: 12px 0; border-top: 1px solid #edf1ee; }
 .parcel-data dt { margin-bottom: 4px; color: #87928c; font-size: 11px; }
 .parcel-data dd { margin: 0; overflow-wrap: anywhere; font-size: 13px; font-weight: 600; }
+.coordinate-label { display: block; margin-top: 3px; color: #87928c; font-size: 9px; font-weight: 500; }
 .selected-badge { display: flex; align-items: center; gap: 8px; margin-top: 18px; padding: 11px; border-radius: 9px; background: #eef7f0; color: #377252; font-size: 11px; font-weight: 600; }
 .selected-badge span { width: 7px; height: 7px; border-radius: 50%; background: #36a66d; }
 .source-box { display: flex; gap: 10px; align-items: flex-start; margin-top: auto; padding: 13px; border-radius: 10px; background: #f7f9f7; }
