@@ -146,26 +146,52 @@ function warningDegreeLabel(degree: string | null) {
 }
 
 function warningDate(value: string | null) {
+  if (!value || value.startsWith("9999-")) return null;
   return value ? value.slice(0, 16).replace("T", " ") : "brak daty";
 }
 
 function WarningList({ title, warnings }: { title: string; warnings: ImgwWarning[] }) {
+  const grouped = warnings.reduce<Map<string, ImgwWarning[]>>((groups, warning) => {
+    const key = warning.event;
+    groups.set(key, [...(groups.get(key) ?? []), warning]);
+    return groups;
+  }, new Map());
+
   return (
     <div className="imgw-warning-group">
-      <h3 className="report-subtitle">{title}</h3>
+      <div className="imgw-warning-group-heading">
+        <h3 className="report-subtitle">{title}</h3>
+        {warnings.length > 0 && <span className="imgw-warning-count">{warnings.length} {warnings.length === 1 ? "ostrzeżenie" : warnings.length < 5 ? "ostrzeżenia" : "ostrzeżeń"}</span>}
+      </div>
       {warnings.length ? (
-        <ul className="imgw-warning-list">
-          {warnings.map((warning) => (
-            <li key={warning.id} className="imgw-warning-item">
-              <div className="imgw-warning-heading">
-                <strong>{warning.event}</strong>
-                <span>{warningDegreeLabel(warning.degree)}</span>
+        <div className="imgw-warning-list">
+          {[...grouped.entries()].map(([event, entries]) => (
+            <details key={event} className="imgw-warning-item">
+              <summary className="imgw-warning-heading">
+                <span className="imgw-warning-title">
+                  <svg className="imgw-warning-icon" aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="M12 3 2.8 19.1A1.9 1.9 0 0 0 4.45 22h15.1A1.9 1.9 0 0 0 21.2 19.1L12 3Z" fill="currentColor" />
+                    <path d="M12 8.2v6.1M12 17.7v.1" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  <strong>{event}</strong>
+                </span>
+                <span>{entries.length} {entries.length === 1 ? "komunikat" : entries.length < 5 ? "komunikaty" : "komunikatów"}</span>
+              </summary>
+              <div className="imgw-warning-details">
+                {entries.map((warning) => (
+                  <article key={warning.id} className="imgw-warning-detail">
+                    <div className="imgw-warning-detail-heading">
+                      <strong>{warningDegreeLabel(warning.degree)}</strong>
+                      {warningDate(warning.endsAt) && <span>Do: {warningDate(warning.endsAt)}</span>}
+                    </div>
+                    <p>{warning.description}</p>
+                    <small title={warning.area}>Obszar: {warning.area}</small>
+                  </article>
+                ))}
               </div>
-              <p>{warning.description}</p>
-              <small>Obszar: {warning.area} · do {warningDate(warning.endsAt)}{warning.probabilityPercent !== null ? ` · prawdopodobieństwo ${warning.probabilityPercent}%` : ""}</small>
-            </li>
+            </details>
           ))}
-        </ul>
+        </div>
       ) : <p className="report-note">Brak obecnych ostrzeżeń w sprawdzonym obszarze.</p>}
     </div>
   );
@@ -313,6 +339,7 @@ export default function ReportView({
     }
 
     (async () => {
+
       const resolvedMap = new Map<string, ParcelResult>();
 
       if (effectiveIds.length === 1) {
@@ -478,6 +505,7 @@ export default function ReportView({
           return;
         }
 
+
         const hydroPromise = postJson<HydroResult>("/api/hydro", { latitude: lat, longitude: lng }, controller.signal)
           .then((data) => patchEntry(reqId, { hydro: { status: "ready", data } }))
           .catch((reason) => patchEntry(reqId, { hydro: { status: "error", message: errorMessage(reason, "Dane hydrologiczne niedostępne.") } }));
@@ -515,12 +543,14 @@ export default function ReportView({
         await Promise.all([imgwPromise, hydroPromise, weatherAndSatPromise]);
       });
 
+
       await runWithConcurrency(tasks, 3);
     })();
 
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveIds.join("|"), pointsKey, crop]);
+
 
   const reportDate = useMemo(() => generatedAt ?? new Date(), [generatedAt]);
   const detailed = mode === "detailed";
@@ -1447,6 +1477,7 @@ function ParcelDetailedBlocks({
       <section className="report-card report-block">
         <div className="report-section-heading">
           <div>
+
             <span className="weather-kicker">HYDROLOGIA · GLEBA, BILANS, CIEKI{parcelBadge ? ` · ${parcelBadge}` : ""}</span>
             <h2 className="report-title">Pomiary hydrologiczne</h2>
           </div>
@@ -1627,8 +1658,12 @@ function WaterChart({ days }: { days: HydroResult["daily"] }) {
   );
 }
 
-function Metric({ value, unit, label, signed = false, digits }: { value: number | null; unit: string; label: string; signed?: boolean; digits?: number }) {
-  const shown = value === null ? "—" : `${signed && value > 0 ? "+" : ""}${digits === undefined ? value : value.toFixed(digits)}`;
+function Metric({ value, unit, label, signed = false, digits }: { value: number | string | null; unit: string; label: string; signed?: boolean; digits?: number }) {
+  const shown = value === null
+    ? "—"
+    : typeof value === "string"
+      ? value
+      : `${signed && value > 0 ? "+" : ""}${digits === undefined ? value : value.toFixed(digits)}`;
   return (
     <div className="report-metric">
       <span className="weather-value">{shown}</span>
