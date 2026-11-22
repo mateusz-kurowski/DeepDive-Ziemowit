@@ -162,19 +162,33 @@ export default function ReportView({ parcelId, point, crop }: {
   const parcelData = parcel.status === "ready" ? parcel.data : null;
   const dataLoading = weather.status === "loading" || hydro.status === "loading";
   const satelliteArg = satellite.status === "loading" ? undefined : satelliteData;
+  const latitude = point?.lat ?? parcelData?.lat ?? hydroData?.location.latitude ?? null;
   const summary = useMemo(
-    () => (dataLoading || (!weatherData && !hydroData) ? null : buildSummary(weatherData, hydroData, satelliteArg)),
-    [dataLoading, weatherData, hydroData, satelliteArg],
+    () => (dataLoading || (!weatherData && !hydroData) ? null : buildSummary(weatherData, hydroData, satelliteArg, {
+      date: generatedAt ?? new Date(),
+      crop,
+      latitude,
+    })),
+    [dataLoading, weatherData, hydroData, satelliteArg, generatedAt, crop, latitude],
   );
   const tiles = useMemo(
-    () => (summary ? buildSimpleTiles(weatherData, hydroData, satelliteArg) : []),
-    [summary, weatherData, hydroData, satelliteArg],
+    () => (summary ? buildSimpleTiles(weatherData, hydroData, satelliteArg, { date: generatedAt ?? new Date(), crop, latitude }) : []),
+    [summary, weatherData, hydroData, satelliteArg, generatedAt, crop, latitude],
   );
   const advice = useMemo(
     () => (summary
-      ? buildAdvice({ kind: summary.verdict.kind, weather: weatherData, hydro: hydroData, satellite: satelliteArg, crop, month: new Date().getMonth() })
+      ? buildAdvice({
+        kind: summary.verdict.kind,
+        weather: weatherData,
+        hydro: hydroData,
+        satellite: satelliteArg,
+        crop,
+        month: (generatedAt ?? new Date()).getMonth(),
+        date: generatedAt ?? new Date(),
+        latitude,
+      })
       : []),
-    [summary, weatherData, hydroData, satelliteArg, crop],
+    [summary, weatherData, hydroData, satelliteArg, crop, generatedAt, latitude],
   );
   const detailed = mode === "detailed";
   const cropName = cropLabels[crop] ?? "wybrana uprawa";
@@ -350,7 +364,7 @@ export default function ReportView({ parcelId, point, crop }: {
         ) : (
           <>
             <div className="report-metrics">
-              <Metric value={hydro.data.soil.rootZonePct} unit="% obj." label={`Wilgotność gleby 9–27 cm · ${soilLabel[hydro.data.soil.status]}`} />
+              <Metric value={hydro.data.soil.rootZonePct} unit="% obj." label={`Wilgotność gleby 9–27 cm · ${soilLabel[summary?.soil.status && summary.soil.status !== "unknown" ? summary.soil.status : hydro.data.soil.status]}`} />
               <Metric value={hydro.data.soil.surfacePct} unit="% obj." label="Wilgotność powierzchni 0–1 cm" />
               <Metric value={hydro.data.soil.deepPct} unit="% obj." label="Wilgotność głęboka 27–81 cm" />
               <Metric value={hydro.data.waterBalance.evapotranspirationMm} unit="mm" label="Parowanie (ET₀) / 30 dni" />
@@ -445,7 +459,9 @@ export default function ReportView({ parcelId, point, crop }: {
               <Metric value={satellite.data.ndvi} unit="" label="NDVI teraz" digits={2} />
               <Metric value={satellite.data.historicalNdvi} unit="" label="NDVI rok temu" digits={2} />
               <Metric value={satellite.data.ndviDifference} unit="" label="Różnica rok do roku" digits={2} signed />
+              {satellite.data.ndwi != null && <Metric value={satellite.data.ndwi} unit="" label="NDWI, woda w roślinach" digits={2} />}
             </div>
+            {summary?.sceneNote && <p className="report-note">{summary.sceneNote}</p>}
             <p className="satellite-meta">
               Obserwacja: <strong>{satellite.data.date ?? "brak"}</strong>
               {" · "}chmury: <strong>{satellite.data.cloudCoverPercent?.toFixed(1) ?? "—"}%</strong>
@@ -453,7 +469,7 @@ export default function ReportView({ parcelId, point, crop }: {
             </p>
             <p className="ndvi-explanation">
               <strong>Co oznacza NDVI?</strong> Wskaźnik od 0 do 1 opisuje intensywność zielonego pokrycia roślin:
-              poniżej 0,3 — słabe lub rozproszone, 0,3–0,6 — umiarkowane, powyżej 0,6 — silne.
+              0,2–0,4 — słaba kondycja, 0,4–0,6 — umiarkowana, powyżej 0,6 — dobra.
               Nie jest pomiarem wilgotności gleby.
             </p>
             <p className="satellite-interpretation">{satellite.data.interpretation}</p>

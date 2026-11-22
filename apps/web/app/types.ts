@@ -12,6 +12,15 @@ export type ParcelResult = {
   } | null;
 };
 
+export type SoilTexture =
+  | "sand"
+  | "loamy_sand"
+  | "sandy_loam"
+  | "loam"
+  | "silt_loam"
+  | "clay_loam"
+  | "clay";
+
 export type WeatherResult = {
   date: string;
   coverage: { start: string; end: string; daysRequested: number; daysAvailable: number };
@@ -21,6 +30,8 @@ export type WeatherResult = {
     maximumTemperatureC: number | null;
     longestDrySpellDays: number | null;
     precipitationShortfallMm: number | null;
+    spi1?: number | null;
+    spi3?: number | null;
   };
   series: Array<{
     date: string;
@@ -34,6 +45,8 @@ export type WeatherResult = {
     differencePercent: number | null;
     assessment: string;
   };
+  /** Opady X–II względem normy, w %. Używane w poradzie po roztopach. */
+  winterPrecipAnomalyPct?: number | null;
   source: { provider: string };
   limitations: string[];
 };
@@ -62,12 +75,19 @@ export type HydroResult = {
     rootZoneChangePp: number | null;
     status: "dry" | "moderate" | "wet" | "unknown";
     assessment: string;
+    texture?: SoilTexture | null;
+    normalPct?: number | null;
+    sdPct?: number | null;
   };
   waterBalance: {
     precipitationMm: number | null;
     evapotranspirationMm: number | null;
     balanceMm: number | null;
     assessment: string;
+    /** Średni bilans tych samych 30 dni z lat poprzednich. */
+    normal30Mm?: number | null;
+    /** balanceMm − normal30Mm. Gdy null, ocena wraca do progów bezwzględnych. */
+    anomalyMm?: number | null;
   };
   forecast: {
     days: number;
@@ -82,6 +102,7 @@ export type HydroResult = {
     forecastMaxM3s: number | null;
     trendPercent: number | null;
     assessment: string;
+    catchmentKm2?: number | null;
   } | null;
   stations: HydroStation[];
   sources: string[];
@@ -101,6 +122,13 @@ export type SatelliteResult = {
   ndvi: number | null;
   historicalNdvi: number | null;
   ndviDifference: number | null;
+  /** Średnia NDVI tej działki dla tej samej dekady z lat poprzednich. */
+  ndviNormal?: number | null;
+  ndviSd?: number | null;
+  /** (B8A − B12) / (B8A + B12). Woda w roślinach. */
+  ndwi?: number | null;
+  /** Udział czystych pikseli SCL. Gdy brak, używane jest validPixelPercent. */
+  sceneClearPct?: number | null;
   validPixelPercent: number | null;
   crop: string;
   interpretation: string;

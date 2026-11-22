@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { fromUrl } from "geotiff";
 import proj4 from "proj4";
 import sharp from "sharp";
+import { SCENE, VEG } from "../../raport/advice-config";
 
 export const runtime = "nodejs";
 
@@ -313,13 +314,13 @@ function interpret(ndvi: number | null, difference: number | null, crop: string,
   };
   const cropName = `uprawy ${cropNames[crop] ?? "tej uprawy"}`;
   let vegetation = "Stan roślinności jest umiarkowany.";
-  if (ndvi >= 0.6) vegetation = "Roślinność jest silnie rozwinięta.";
-  else if (ndvi < 0.3) vegetation = "Roślinność ma słabą lub rozproszoną zieloną biomase.";
+  if (ndvi >= VEG.ndviGood) vegetation = "Roślinność jest silnie rozwinięta.";
+  else if (ndvi < VEG.ndviWeak) vegetation = "Roślinność ma słabą lub rozproszoną zieloną biomasę.";
 
   let comparison = "";
   if (difference !== null) {
-    if (difference < -0.08) comparison = " W porównaniu z analogicznym okresem ubiegłego roku wartość jest wyraźnie niższa.";
-    else if (difference > 0.08) comparison = " W porównaniu z analogicznym okresem ubiegłego roku wartość jest wyraźnie wyższa.";
+    if (difference <= VEG.ndviYoYDrop) comparison = " W porównaniu z analogicznym okresem ubiegłego roku wartość jest wyraźnie niższa. Jeśli rok temu rosła tu inna uprawa, porównanie może mylić.";
+    else if (difference >= -VEG.ndviYoYDrop) comparison = " W porównaniu z analogicznym okresem ubiegłego roku wartość jest wyraźnie wyższa.";
     else comparison = " W porównaniu z analogicznym okresem ubiegłego roku wartość jest zbliżona.";
   }
   const uncertainty = weatherAvailable
@@ -405,7 +406,7 @@ export async function POST(request: Request) {
     ]);
 
     const result: SatelliteResult = {
-      status: current.validPixelPercent !== null && current.validPixelPercent < 70 ? "partial" : "available",
+      status: current.validPixelPercent !== null && current.validPixelPercent < SCENE.minClearPct ? "partial" : "available",
       provider: "Earth Search",
       satellite: "Sentinel-2",
       level: "L2A",
