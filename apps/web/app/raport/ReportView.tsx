@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
-import type { HydroResult, HydroStation, ImgwWarning, ImgwWarningsResult, ParcelResult, SatelliteResult, WeatherResult } from "../types";
+import type { DroughtResult, HydroResult, HydroStation, ImgwWarning, ImgwWarningsResult, ParcelResult, SatelliteResult, SoilTextureResult, TerrainFlowResult, WeatherResult } from "../types";
 import BrandLogo from "../components/BrandLogo";
 import SatelliteImage from "../components/SatelliteImage";
 import { buildAdvice, timingLabel } from "./advice";
@@ -79,26 +79,52 @@ function warningDegreeLabel(degree: string | null) {
 }
 
 function warningDate(value: string | null) {
+  if (!value || value.startsWith("9999-")) return null;
   return value ? value.slice(0, 16).replace("T", " ") : "brak daty";
 }
 
 function WarningList({ title, warnings }: { title: string; warnings: ImgwWarning[] }) {
+  const grouped = warnings.reduce<Map<string, ImgwWarning[]>>((groups, warning) => {
+    const key = warning.event;
+    groups.set(key, [...(groups.get(key) ?? []), warning]);
+    return groups;
+  }, new Map());
+
   return (
     <div className="imgw-warning-group">
-      <h3 className="report-subtitle">{title}</h3>
+      <div className="imgw-warning-group-heading">
+        <h3 className="report-subtitle">{title}</h3>
+        {warnings.length > 0 && <span className="imgw-warning-count">{warnings.length} {warnings.length === 1 ? "ostrzeżenie" : warnings.length < 5 ? "ostrzeżenia" : "ostrzeżeń"}</span>}
+      </div>
       {warnings.length ? (
-        <ul className="imgw-warning-list">
-          {warnings.map((warning) => (
-            <li key={warning.id} className="imgw-warning-item">
-              <div className="imgw-warning-heading">
-                <strong>{warning.event}</strong>
-                <span>{warningDegreeLabel(warning.degree)}</span>
+        <div className="imgw-warning-list">
+          {[...grouped.entries()].map(([event, entries]) => (
+            <details key={event} className="imgw-warning-item">
+              <summary className="imgw-warning-heading">
+                <span className="imgw-warning-title">
+                  <svg className="imgw-warning-icon" aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="M12 3 2.8 19.1A1.9 1.9 0 0 0 4.45 22h15.1A1.9 1.9 0 0 0 21.2 19.1L12 3Z" fill="currentColor" />
+                    <path d="M12 8.2v6.1M12 17.7v.1" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  <strong>{event}</strong>
+                </span>
+                <span>{entries.length} {entries.length === 1 ? "komunikat" : entries.length < 5 ? "komunikaty" : "komunikatów"}</span>
+              </summary>
+              <div className="imgw-warning-details">
+                {entries.map((warning) => (
+                  <article key={warning.id} className="imgw-warning-detail">
+                    <div className="imgw-warning-detail-heading">
+                      <strong>{warningDegreeLabel(warning.degree)}</strong>
+                      {warningDate(warning.endsAt) && <span>Do: {warningDate(warning.endsAt)}</span>}
+                    </div>
+                    <p>{warning.description}</p>
+                    <small title={warning.area}>Obszar: {warning.area}</small>
+                  </article>
+                ))}
               </div>
-              <p>{warning.description}</p>
-              <small>Obszar: {warning.area} · do {warningDate(warning.endsAt)}{warning.probabilityPercent !== null ? ` · prawdopodobieństwo ${warning.probabilityPercent}%` : ""}</small>
-            </li>
+            </details>
           ))}
-        </ul>
+        </div>
       ) : <p className="report-note">Brak obecnych ostrzeżeń w sprawdzonym obszarze.</p>}
     </div>
   );
@@ -123,6 +149,9 @@ export default function ReportView({ parcelId, point, crop }: {
   const [parcel, setParcel] = useState<LoadState<ParcelResult>>({ status: "loading" });
   const [weather, setWeather] = useState<LoadState<WeatherResult>>({ status: "loading" });
   const [hydro, setHydro] = useState<LoadState<HydroResult>>({ status: "loading" });
+  const [soilTexture, setSoilTexture] = useState<LoadState<SoilTextureResult>>({ status: "loading" });
+  const [terrainFlow, setTerrainFlow] = useState<LoadState<TerrainFlowResult>>({ status: "loading" });
+  const [drought, setDrought] = useState<LoadState<DroughtResult>>({ status: "loading" });
   const [imgwWarnings, setImgwWarnings] = useState<LoadState<ImgwWarningsResult>>({ status: "loading" });
   const [satellite, setSatellite] = useState<LoadState<SatelliteResult>>({ status: "loading" });
   const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
@@ -144,9 +173,15 @@ export default function ReportView({ parcelId, point, crop }: {
       setImgwWarnings({ status: "error", message: "Brak identyfikatora działki do sprawdzenia ostrzeżeń IMGW." });
       setParcel({ status: "error", message: "Brak identyfikatora działki w adresie raportu." });
       setSatellite({ status: "error", message: "Brak identyfikatora działki." });
+      setSoilTexture({ status: "error", message: "Brak identyfikatora działki." });
+      setTerrainFlow({ status: "error", message: "Brak identyfikatora działki." });
+      setDrought({ status: "error", message: "Brak identyfikatora działki." });
       return;
     }
     setSatellite({ status: "loading" });
+    setSoilTexture({ status: "loading" });
+    setTerrainFlow({ status: "loading" });
+    setDrought({ status: "loading" });
     setImgwWarnings({ status: "loading" });
     const controller = new AbortController();
 
@@ -164,6 +199,9 @@ export default function ReportView({ parcelId, point, crop }: {
           setWeather({ status: "error", message: "Brak lokalizacji działki." });
           setHydro({ status: "error", message: "Brak lokalizacji działki." });
           setSatellite({ status: "error", message: "Brak lokalizacji działki." });
+          setSoilTexture({ status: "error", message: "Brak lokalizacji działki." });
+          setTerrainFlow({ status: "error", message: "Brak lokalizacji działki." });
+          setDrought({ status: "error", message: "Brak lokalizacji działki." });
           return;
         }
         selected = { id: parcelId, parcel: parcelId, commune: "", county: "", voivodeship: "", lat: point.lat, lng: point.lng, geometry: null };
@@ -176,6 +214,9 @@ export default function ReportView({ parcelId, point, crop }: {
         setWeather({ status: "error", message: "Brak współrzędnych działki." });
         setHydro({ status: "error", message: "Brak współrzędnych działki." });
         setSatellite({ status: "error", message: "Brak współrzędnych działki." });
+        setSoilTexture({ status: "error", message: "Brak współrzędnych działki." });
+        setTerrainFlow({ status: "error", message: "Brak współrzędnych działki." });
+        setDrought({ status: "error", message: "Brak współrzędnych działki." });
         return;
       }
 
@@ -191,16 +232,43 @@ export default function ReportView({ parcelId, point, crop }: {
         .then((data) => setHydro({ status: "ready", data }))
         .catch((reason) => { if (!controller.signal.aborted) setHydro({ status: "error", message: errorMessage(reason, "Dane hydrologiczne niedostępne.") }); });
 
+      void postJson<SoilTextureResult>("/api/soil-texture", { lat, lng }, controller.signal)
+        .then((data) => setSoilTexture({ status: "ready", data }))
+        .catch((reason) => { if (!controller.signal.aborted) setSoilTexture({ status: "error", message: errorMessage(reason, "Dane uziarnienia gleby niedostępne.") }); });
+
+      void postJson<TerrainFlowResult>("/api/terrain-flow", {
+        id: selected.id,
+        lat,
+        lng,
+        geometry: selected.geometry,
+      }, controller.signal)
+        .then((data) => setTerrainFlow({ status: "ready", data }))
+        .catch((reason) => { if (!controller.signal.aborted) setTerrainFlow({ status: "error", message: errorMessage(reason, "Analiza spływu niedostępna.") }); });
+
       void (async () => {
         let weatherAvailable = false;
+        let precipitation30DaysMm: number | null = null;
         try {
           const data = await postJson<WeatherResult>("/api/weather", { latitude: lat, longitude: lng, date: todayIso() }, controller.signal);
           weatherAvailable = true;
+          precipitation30DaysMm = data.indicators.precipitationSumMm;
           if (!controller.signal.aborted) setWeather({ status: "ready", data });
         } catch (reason) {
           if (!controller.signal.aborted) setWeather({ status: "error", message: errorMessage(reason, "Dane meteorologiczne niedostępne.") });
         }
         if (controller.signal.aborted) return;
+        try {
+          const data = await postJson<DroughtResult>("/api/drought", {
+            lat,
+            lng,
+            crop,
+            geometry: selected.geometry,
+            precipitation30DaysMm,
+          }, controller.signal);
+          if (!controller.signal.aborted) setDrought({ status: "ready", data });
+        } catch (reason) {
+          if (!controller.signal.aborted) setDrought({ status: "error", message: errorMessage(reason, "Ocena podatności gleby niedostępna.") });
+        }
         try {
           const data = await postJson<SatelliteResult>("/api/satellite", {
             lat,
@@ -221,6 +289,9 @@ export default function ReportView({ parcelId, point, crop }: {
 
   const weatherData = weather.status === "ready" ? weather.data : null;
   const hydroData = hydro.status === "ready" ? hydro.data : null;
+  const soilTextureData = soilTexture.status === "ready" ? soilTexture.data : null;
+  const terrainFlowData = terrainFlow.status === "ready" ? terrainFlow.data : null;
+  const droughtData = drought.status === "ready" ? drought.data : null;
   const satelliteData = satellite.status === "ready" ? satellite.data : null;
   const parcelData = parcel.status === "ready" ? parcel.data : null;
   const dataLoading = weather.status === "loading" || hydro.status === "loading";
@@ -451,6 +522,131 @@ export default function ReportView({ parcelId, point, crop }: {
 
       <section className="report-card report-block">
         <div className="report-section-heading">
+          <div>
+            <span className="weather-kicker">GLEBA · NMT GUGiK · SPŁYW POWIERZCHNIOWY</span>
+            <h2 className="report-title">Charakterystyka gleby i terenu</h2>
+          </div>
+          {soilTextureData && <span className="weather-source">SoilGrids · {soilTextureData.source.resolutionM} m</span>}
+        </div>
+        {soilTexture.status === "loading" || terrainFlow.status === "loading" ? (
+          <div className="status-message"><span className="spinner" /> Pobieram uziarnienie gleby i analizuję NMT…</div>
+        ) : (
+          <div className="report-grid-2 inner">
+            <div>
+              <h3 className="report-subtitle">Uziarnienie wierzchniej warstwy gleby</h3>
+              {soilTexture.status === "error" ? (
+                <p className="weather-error">{soilTexture.message}</p>
+              ) : soilTextureData?.status === "unresolved-zero" ? (
+                <p className="report-note">Usługa zwróciła same zera bez jednoznacznego znacznika braku danych. Nie można wiarygodnie określić składu gleby.</p>
+              ) : soilTextureData ? (
+                <>
+                  <div className="soil-fractions" aria-label="Udziały frakcji gleby">
+                    {(["sand", "silt", "clay"] as const).map((key) => {
+                      const fraction = soilTextureData.fractions[key];
+                      const percent = fraction.valueGkg === null ? null : fraction.valueGkg / 10;
+                      return (
+                        <div className="soil-fraction" key={key}>
+                          <div className="soil-fraction-heading"><span>{fraction.label}</span><strong>{percent === null ? "—" : `${percent.toFixed(1)}%`}</strong></div>
+                          <div className="soil-bar"><span className={`soil-bar-fill soil-${key}`} style={{ width: `${Math.max(0, Math.min(percent ?? 0, 100))}%` }} /></div>
+                          <small>{fraction.valueGkg === null ? "brak danych" : `${fraction.valueGkg} g/kg`}</small>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {soilTextureData.status === "partial" && <p className="report-note">Część frakcji nie ma wartości w źródle.</p>}
+                  <p className="report-note">Głębokość {soilTextureData.depth}; źródło: <a href={soilTextureData.source.url} target="_blank" rel="noreferrer">{soilTextureData.source.name}</a>. Wartości opisują punkt reprezentatywny, nie całe granice działki.</p>
+                </>
+              ) : null}
+            </div>
+            <div>
+              <h3 className="report-subtitle">Potencjalny spływ powierzchniowy</h3>
+              {terrainFlow.status === "error" ? (
+                <p className="weather-error">{terrainFlow.message}</p>
+              ) : terrainFlowData ? (
+                <>
+                  <div className="terrain-flow-summary">
+                    <div><small>Średnie nachylenie</small><strong>{terrainFlowData.slope.meanDeg === null ? "—" : `${terrainFlowData.slope.meanDeg}°`}</strong></div>
+                    <div><small>Nachylenie — 90. percentyl</small><strong>{terrainFlowData.slope.p90Deg === null ? "—" : `${terrainFlowData.slope.p90Deg}°`}</strong></div>
+                    <div><small>Próbkowane komórki</small><strong>{terrainFlowData.validSampleCount}</strong></div>
+                  </div>
+                  <div className="terrain-flow-groups">
+                    <div>
+                      <strong>Potencjalny dopływ z otoczenia</strong>
+                      {terrainFlowData.flow.inflowExits.length ? (
+                        <ul>{terrainFlowData.flow.inflowExits.map((exit) => <li key={exit.direction}><span>Kierunek {exit.direction}</span><span>≈ {exit.estimatedContributingAreaM2.toLocaleString("pl-PL")} m²</span></li>)}</ul>
+                      ) : <p>Nie wykryto drogi dopływu przecinającej granicę działki.</p>}
+                    </div>
+                    <div>
+                      <strong>Potencjalny odpływ poza działkę</strong>
+                      {terrainFlowData.flow.outflowExits.length ? (
+                        <ul>{terrainFlowData.flow.outflowExits.map((exit) => <li key={exit.direction}><span>Kierunek {exit.direction}</span><span>≈ {exit.estimatedContributingAreaM2.toLocaleString("pl-PL")} m²</span></li>)}</ul>
+                      ) : <p>Nie wykryto drogi spływu przecinającej granicę działki.</p>}
+                    </div>
+                  </div>
+                  {terrainFlowData.flow.depressions.length > 0 && (
+                    <p className="report-note">Możliwe miejsca gromadzenia: {terrainFlowData.flow.depressions.map((item, index) => `obniżenie ${index + 1} — ${item.areaM2.toLocaleString("pl-PL")} m²`).join("; ")}.</p>
+                  )}
+                  <p className="report-note">Źródło NMT: <a href={terrainFlowData.source.url} target="_blank" rel="noreferrer">{terrainFlowData.source.name}</a>; siatka {terrainFlowData.sampleSpacingM} m, bufor {terrainFlowData.bufferM} m. Model nie uwzględnia rowów, przepustów i infiltracji.</p>
+                </>
+              ) : null}
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="report-card report-block">
+        <div className="report-section-heading">
+          <div>
+            <span className="weather-kicker">IUNG-PIB · SUSZA · WARSTWA 2024</span>
+            <h2 className="report-title">Podatność gleby i ryzyko suszy</h2>
+          </div>
+          {droughtData?.category && <span className="weather-source">Kat. {droughtData.category.code}</span>}
+        </div>
+        {drought.status === "loading" ? (
+          <div className="status-message"><span className="spinner" /> Pobieram podatność gleby IUNG…</div>
+        ) : drought.status === "error" ? (
+          <p className="weather-error">{drought.message}</p>
+        ) : droughtData ? (
+          droughtData.status === "unavailable" || !droughtData.category ? (
+            <div className="drought-unavailable">
+              <strong>Brak danych o podatności gleby dla tej działki.</strong>
+              <p>{droughtData.unclassifiedPercentage >= 99.9
+                ? "Cała powierzchnia działki jest nieklasyfikowana przez warstwę IUNG. Nie przypisujemy jej kategorii podatności I–IV ani nie wyliczamy ryzyka suszy."
+                : "Warstwa IUNG nie przypisała działce wystarczającej powierzchni do kategorii I–IV podatności gleby."}</p>
+            </div>
+          ) : (
+            <>
+              <div className="report-drought-grid">
+                <div className="report-metrics compact">
+                  <Metric value={droughtData.category.susceptibility} unit="" label="Podatność gleby" />
+                  <Metric value={droughtData.currentRisk} unit="" label="Bieżące ryzyko" />
+                  {droughtData.unclassifiedPercentage > 0 && <Metric value={`${droughtData.unclassifiedPercentage.toFixed(1)}%`} unit="" label="Nieklasyfikowana część działki" />}
+                </div>
+                {droughtData.previewUrl && (
+                  <figure className="report-drought-preview">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={droughtData.previewUrl} alt="Wycinek mapy podatności gleby IUNG dla granic działki" />
+                    <figcaption>Wycinek mapy IUNG dla działki</figcaption>
+                  </figure>
+                )}
+              </div>
+              <div className="drought-legend report-drought-legend" aria-label="Legenda kategorii podatności gleby IUNG">
+                <span><i className="drought-legend-1" />I — bardzo podatna <strong>{droughtData.categoryPercentages["1"].toFixed(1)}%</strong></span>
+                <span><i className="drought-legend-2" />II — podatna <strong>{droughtData.categoryPercentages["2"].toFixed(1)}%</strong></span>
+                <span><i className="drought-legend-3" />III — średnio podatna <strong>{droughtData.categoryPercentages["3"].toFixed(1)}%</strong></span>
+                <span><i className="drought-legend-4" />IV — mało podatna <strong>{droughtData.categoryPercentages["4"].toFixed(1)}%</strong></span>
+              </div>
+              <p className="report-note">{droughtData.interpretation}</p>
+              {droughtData.precipitationDeficitMm !== null && droughtData.precipitationDeficitMm > 0 && (
+                <p className="report-note"><strong>Niedobór względem orientacyjnego progu:</strong> {droughtData.precipitationDeficitMm.toFixed(1)} mm.</p>
+              )}
+            </>
+          )
+        ) : null}
+      </section>
+
+      <section className="report-card report-block">
+        <div className="report-section-heading">
           <div><span className="weather-kicker">HYDROLOGIA · GLEBA, BILANS, CIEKI</span><h2 className="report-title">Pomiary hydrologiczne</h2></div>
           {hydroData && <span className="weather-source">{hydroData.sources.join(" · ")}</span>}
         </div>
@@ -638,8 +834,12 @@ function WaterChart({ days }: { days: HydroResult["daily"] }) {
   );
 }
 
-function Metric({ value, unit, label, signed = false, digits }: { value: number | null; unit: string; label: string; signed?: boolean; digits?: number }) {
-  const shown = value === null ? "—" : `${signed && value > 0 ? "+" : ""}${digits === undefined ? value : value.toFixed(digits)}`;
+function Metric({ value, unit, label, signed = false, digits }: { value: number | string | null; unit: string; label: string; signed?: boolean; digits?: number }) {
+  const shown = value === null
+    ? "—"
+    : typeof value === "string"
+      ? value
+      : `${signed && value > 0 ? "+" : ""}${digits === undefined ? value : value.toFixed(digits)}`;
   return (
     <div className="report-metric">
       <span className="weather-value">{shown}</span>

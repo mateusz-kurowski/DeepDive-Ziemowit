@@ -963,7 +963,6 @@ export default function Home() {
                   <div><dt>Lokalizacja</dt><dd>{parcel.lat.toFixed(6)}, {parcel.lng.toFixed(6)}<small className="coordinate-label"> lat, lon</small></dd></div>
                 )}
               </dl>
-              <div className="selected-badge"><span /> Działka zaznaczona na mapie</div>
               <a className="report-button" href={reportUrl(parcel, crop)} target="_blank" rel="noopener">
                 Otwórz raport wodny działki <span aria-hidden="true">→</span>
               </a>
