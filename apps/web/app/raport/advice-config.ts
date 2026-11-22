@@ -1,9 +1,8 @@
 import type { SoilTexture } from "../types";
 
 /**
- * Jedno miejsce na progi rekomendacji Ziemowita.
- * Generator `npm run advice:matrix` czyta te stałe do sekcji „1. Reguły”.
- * Wartości oznaczone w specyfikacji jako „DO KALIBRACJI” zostają tu, żeby dało się je zmienić bez ruszania logiki.
+ * Konfiguracja progów hydrologicznych, meteorologicznych i agronomicznych silnika rekomendacji.
+ * Wykorzystywana również przez generator macierzy reguł (`npm run advice:matrix`).
  */
 
 export const SEASON = {
@@ -27,14 +26,14 @@ export const PRECIP = {
   surplusPct: 20,
 } as const;
 
-/** Anomalia bilansu (opad − ET0) względem wielolecia, w mm. DO KALIBRACJI. */
+/** Anomalia 30-dniowego bilansu wodnego (opad − ET0) względem wielolecia [mm]. */
 export const BALANCE = {
   deficit1: -15,
   deficit2: -40,
   surplus1: 20,
 } as const;
 
-/** Gdy nie ma normy wieloletniej — progi na bilansie bezwzględnym. */
+/** Progi bezwzględnego bilansu wodnego [mm] stosowane przy braku normy wieloletniej. */
 export const BALANCE_FALLBACK = {
   vegetation: { deficit1: -30, deficit2: -50, surplus1: 15 },
   other: { deficit1: -5, deficit2: -30, surplus1: 15 },
@@ -43,16 +42,13 @@ export const BALANCE_FALLBACK = {
 export const DRY_SPELL_DAYS = 10;
 export const SOIL_DROP_PP = -3;
 
-/** Progi, gdy nie znamy uziarnienia. Orientacyjne. */
+/** Orientacyjne progi wilgotności objętościowej gleby [% obj.] przy nieznanym uziarnieniu. */
 export const SOIL_FALLBACK = {
   dryBelow: 15,
   wetAt: 30,
 } as const;
 
-/**
- * Punkt trwałego więdnięcia i polowa pojemność wodna, % obj.
- * Wartości literaturowe, do zatwierdzenia przez gleboznawcę.
- */
+/** Literaturowe wartości punktu trwałego więdnięcia (PTW) i polowej pojemności wodnej (PPW) [% obj.]. */
 export const SOIL_WATER: Record<SoilTexture, { ptw: number; ppw: number }> = {
   sand: { ptw: 4, ppw: 12 },
   loamy_sand: { ptw: 6, ppw: 16 },
@@ -73,7 +69,7 @@ export const SOIL_ANOMALY_Z = -1;
 
 export const SANDY_TEXTURES: readonly SoilTexture[] = ["sand", "loamy_sand"];
 
-/** Trend GloFAS. DO KALIBRACJI. Poniżej progu zlewni trend nie daje punktów. */
+/** Progi trendu przepływu GloFAS [%] oraz minimalna powierzchnia zlewni [km²] uwzględniana w ocenie. */
 export const RIVER = {
   deficit: -20,
   surplus: 30,
@@ -95,13 +91,13 @@ export const VEG = {
   ndwiVeryDry: 0.2,
 } as const;
 
-/** Jakość sceny Sentinel-2. DO KALIBRACJI. */
+/** Wymogi jakościowe obserwacji Sentinel-2 (maksymalny wiek sceny i minimalny udział pikseli bezchmurnych). */
 export const SCENE = {
   maxAgeDays: 10,
   minClearPct: 70,
 } as const;
 
-/** Prognoza 7 dni (opad − ET0), mm. DO KALIBRACJI. */
+/** Próg suchej prognozy 7-dniowej (opad − ET0) [mm]. */
 export const FORECAST = {
   vegetation: -15,
   other: -5,
@@ -109,7 +105,7 @@ export const FORECAST = {
 
 export const WINTER_PRECIP_ANOMALY_PCT = -20;
 
-/** Heurystyka północy. DO POTWIERDZENIA — lepiej po województwie. */
+/** Korekta terminu wiosennego dla północnej części Polski (powyżej 53°N). */
 export const NORTH = {
   latitude: 53,
   aprilOrEarlyMayDays: 10,
@@ -190,8 +186,7 @@ export const ADVICE_ID_ORDER = [
   "humus",
 ] as const;
 
-// Fazy prezentacji odpowiadają logice z PROJEKT.md. Zagrożenia powodziowe
-// pozostają wyjątkiem bezpieczeństwa i są pokazywane przed planem retencji.
+/** Kolejność faz działań: bezpieczeństwo powodziowe → retencja korytowa i rowowa → gleba i agrotechnika → nawadnianie. */
 export const ADVICE_PHASE: Record<(typeof ADVICE_ID_ORDER)[number], number> = {
   flood: 0,
   "gates-close": 1,

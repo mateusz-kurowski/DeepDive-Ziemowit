@@ -325,9 +325,7 @@ export default function ReportView({
   const [entriesById, setEntriesById] = useState<Record<string, ParcelEntryState>>({});
   const [combinedImgwWarnings, setCombinedImgwWarnings] = useState<LoadState<ImgwWarningsResult>>({ status: "loading" });
   const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
-  // Domyślnie każdy raport otwiera się zawsze w trybie prostym ("simple")
   const [mode, setMode] = useState<ReportMode>("simple");
-  // W raporcie dla wielu działek przełącznik u góry wybiera "combined" (raport łączony) albo konkretne ID działki
   const [activeReportTab, setActiveReportTab] = useState<string>("combined");
   const [focusedMapParcelId, setFocusedMapParcelId] = useState<string | null>(null);
   const [activeSectionId, setActiveSectionId] = useState<string>("sekcja-ocena");
@@ -946,7 +944,6 @@ export default function ReportView({
     return () => window.removeEventListener("scroll", handleScroll);
   }, [navItems]);
 
-  // === SINGLE PARCEL REPORT ===
   if (!isMulti) {
     const singleItem = evaluatedParcels[0];
     const parcelState = singleItem ? singleItem.entry.parcel : ({ status: "error", message: "Brak identyfikatora działki w adresie raportu." } as LoadState<ParcelResult>);
@@ -1042,7 +1039,6 @@ export default function ReportView({
     );
   }
 
-  // === MULTI-PARCEL REPORT WITH TOP VIEW SWITCHER (NO STACKED SCROLLING) ===
   const communesSummary = Array.from(
     new Set(readyParcels.map((item) => [item.commune, item.county].filter(Boolean).join(" (") + (item.county && item.commune ? ")" : "")).filter(Boolean)),
   ).join(" · ");

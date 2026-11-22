@@ -717,7 +717,6 @@ export default function Home() {
       return;
     }
 
-    // Domyślny flow pojedynczej działki (1 działka, bez kliknięcia "+ Dodaj kolejną działkę")
     setSelectedParcels([selected]);
     setActiveParcelId(selected.id);
     setSearchText(selected.id);

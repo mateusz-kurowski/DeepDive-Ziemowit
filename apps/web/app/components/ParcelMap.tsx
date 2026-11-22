@@ -62,7 +62,7 @@ function FitParcels({ parcels, fitTrigger }: { parcels: ParcelResult[]; fitTrigg
             animate: false,
           });
         } catch {
-          // Ignore transient Leaflet pane lifecycle races during rapid tab switches
+          // Pominięcie przejściowego błędu warstw Leaflet podczas odmontowywania kontenera mapy.
         }
       });
     }

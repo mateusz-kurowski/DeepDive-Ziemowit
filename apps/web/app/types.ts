@@ -45,7 +45,7 @@ export type WeatherResult = {
     differencePercent: number | null;
     assessment: string;
   };
-  /** Opady X–II względem normy, w %. Używane w poradzie po roztopach. */
+  /** Anomalia opadów zimowych (X–II) względem wielolecia [%]. */
   winterPrecipAnomalyPct?: number | null;
   source: { provider: string };
   limitations: string[];
