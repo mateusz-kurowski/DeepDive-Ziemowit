@@ -373,11 +373,36 @@ export default function ReportView({ parcelId, point, crop }: {
       </section>
 
       {summary && (
+        <section className="report-card report-block cause-card" aria-labelledby="cause-title">
+          <div className="report-section-heading">
+            <div>
+              <span className="weather-kicker">ANALIZA · CO MOŻE STAĆ ZA WYNIKIEM</span>
+              <h2 className="report-title" id="cause-title">Możliwe przyczyny i dowody</h2>
+            </div>
+          </div>
+          {summary.causes.length ? (
+            <ul className="finding-list">
+              {summary.causes.map((cause) => (
+                <li className="finding level-warn" key={`${cause.source}-${cause.title}`}>
+                  <strong>{cause.title}</strong>
+                  <p>{cause.evidence}</p>
+                  <small>Źródło: {cause.source} · {cause.certainty === "sygnał" ? "sygnał, nie pewna diagnoza" : "ogranicza pewność oceny"}</small>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="cause-empty">Na podstawie dostępnych danych nie wskazano wyraźnego czynnika ograniczającego wodę. Sprawdź też ustalenia pomiarowe poniżej.</p>
+          )}
+        </section>
+      )}
+
+      {summary && (
         <section className="report-card report-block">
           <div className="report-section-heading">
             <div>
               <span className="weather-kicker">PLAN DZIAŁAŃ · DOBRANY DO TWOJEJ DZIAŁKI</span>
               <h2 className="report-title">Rekomendacje – jak zatrzymać wodę</h2>
+              <p className="advice-order-note">Kolejność: najpierw zatrzymanie wody w krajobrazie i rowach, następnie działania na glebie i uprawie. Nawadnianie pokazujemy na końcu i tylko wtedy, gdy spełnione są warunki dla danej uprawy.</p>
             </div>
             <span className="weather-source">{advice.length} {advice.length === 1 ? "porada" : advice.length < 5 ? "porady" : "porad"}</span>
           </div>
