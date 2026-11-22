@@ -612,11 +612,6 @@ export default function Home() {
               ))}
             </div>
           </div>
-          <ol className="hero-steps" aria-label="Jak to działa">
-            <li><span>1</span>Wybierz działkę</li>
-            <li><span>2</span>Sprawdź pogodę i glebę</li>
-            <li><span>3</span>Otwórz raport wodny</li>
-          </ol>
         </div>
       </header>
       <section className="workspace" aria-label="Wybór działki">
