@@ -1363,18 +1363,16 @@ export default function Home() {
                         setSearchText(event.target.value);
                         setSearchError("");
                       }}
-                      placeholder={isAddingAnother ? "Wpisz nr lub kliknij na mapie" : "np. Krzewina 134"}
+                      placeholder={isAddingAnother ? "Wpisz nr lub kliknij na mapie" : "np. Krzewina 134 lub pełny ID"}
                       autoComplete="off"
                     />
                     <button type="submit" disabled={loading} aria-label="Szukaj działki">
                       {loading ? "…" : "Szukaj"}
                     </button>
                   </div>
-                  {!isAddingAnother && selectedParcels.length === 0 && (
+                  {armMultiAfterFirst && selectedParcels.length === 0 && (
                     <p className="search-help">
-                      {armMultiAfterFirst
-                        ? "Wybierz pierwszą działkę na mapie lub po numerze, a od razu dodasz kolejną."
-                        : "Wpisz pełny identyfikator albo nazwę obrębu i numer."}
+                      Wybierz pierwszą działkę na mapie lub po numerze, a od razu dodasz kolejną.
                     </p>
                   )}
                   {searchError && <p className="search-error" role="alert">{searchError}</p>}
@@ -1496,7 +1494,7 @@ export default function Home() {
                       </li>
                       <li>
                         <GuideIcon><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" /><circle cx="12" cy="10" r="2.2" /></GuideIcon>
-                        <span>Kliknij działkę na mapie, wpisz numer lub dodaj kilka działek.</span>
+                        <span>Kliknij działkę na mapie lub wpisz numer.</span>
                       </li>
                       <li>
                         <GuideIcon><path d="M7 3.5h7.2L19 8.2V20a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 6 20V5A1.5 1.5 0 0 1 7.5 3.5z" /><path d="M14 3.5V8h4.5M8.5 13h7M8.5 17h4.5" /></GuideIcon>
