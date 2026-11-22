@@ -12,7 +12,7 @@ const HEIGHT_SERVICE = "https://services.gugik.gov.pl/nmt/";
 const BUFFER_M = 50;
 const TARGET_MAX_SAMPLES = 6000;
 const MIN_SAMPLE_SPACING_M = 2;
-const GRID_CACHE_VERSION = "grid-6000-2m-v2";
+const GRID_CACHE_VERSION = "grid-6000-2m-v3";
 const LIST_BATCH_SIZE = 200;
 const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 const cache = new Map<string, { expiresAt: number; value: Record<string, unknown> }>();
@@ -112,7 +112,6 @@ async function fetchHeights(points: Array<{ x: number; y: number }>): Promise<nu
 }
 
 type HeapEntry = { index: number; height: number; order: number };
-
 function heapPush(heap: HeapEntry[], entry: HeapEntry) {
   let i = heap.length;
   heap.push(entry);
@@ -272,6 +271,7 @@ function summarizeFlow(
   slopes.sort((a, b) => a - b);
 
   const outflows = new Map<string, number>();
+  const outflowPoints: Array<{ lat: number; lng: number; direction: string; estimatedContributingAreaM2: number }> = [];
   const inflows = new Map<string, number>();
   const insideCount = inside.reduce((sum, value, index) => sum + (value && valid[index] ? 1 : 0), 0);
   const threshold = Math.max(4, Math.ceil(insideCount * 0.03));
@@ -286,6 +286,8 @@ function summarizeFlow(
       const toY = originY - rowOf(next) * step;
       const direction = compassDirection(toX - fromX, toY - fromY);
       outflows.set(direction, (outflows.get(direction) ?? 0) + accumulation[index]);
+      const [lng, lat] = proj4("EPSG:2180", "EPSG:4326", [fromX, fromY]) as number[];
+      outflowPoints.push({ lat, lng, direction, estimatedContributingAreaM2: Math.round(accumulation[index] * step * step) });
     } else if (next >= 0 && !inside[index] && inside[next]) {
       const fromX = originX + colOf(index) * step;
       const fromY = originY - rowOf(index) * step;
@@ -347,6 +349,7 @@ function summarizeFlow(
     },
     flow: {
       outflowExits: sortedExits(outflows),
+      outflowPoints: outflowPoints.sort((a, b) => b.estimatedContributingAreaM2 - a.estimatedContributingAreaM2).slice(0, 3),
       inflowExits: sortedExits(inflows),
       concentrationZones: topPeaks,
       depressions: depressions.slice(0, 3),

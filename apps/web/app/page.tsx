@@ -1,11 +1,13 @@
 "use client";
 
+import type { Geometry } from "geojson";
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import type { ParcelResult } from "./types";
-import type { MapFocus } from "./components/ParcelMap";
+import { useEffect, useRef, useState } from "react";
 import BrandLogo from "./components/BrandLogo";
+import type { MapFocus } from "./components/ParcelMap";
+import SatelliteImage from "./components/SatelliteImage";
+import type { ParcelResult } from "./types";
 const ParcelMap = dynamic(() => import("./components/ParcelMap"), {
   ssr: false,
   loading: () => <div className="map-loading">Ładowanie mapy…</div>,
@@ -28,38 +30,38 @@ const DEMO_SCENARIOS: DemoScenario[] = [
   {
     id: "zulawy",
     tone: "flood",
-    problem: "Ryzyko podtopień",
+    problem: "Podatność na podtopienia",
     region: "Żuławy Wiślane",
-    detail: "Nowy Dwór Gdański · pszenica ozima",
+    detail: "Ostaszewo · pszenica ozima (scenariusz)",
     crop: "zboza",
-    parcelId: null,
+    parcelId: "221003_2.0002.63/2",
     lat: 54.215,
     lng: 19.012,
-    label: "Żuławy Wiślane, ryzyko podtopień. Ustaw uprawę zboża, pszenica ozima, i wczytaj działkę koło Nowego Dworu Gdańskiego.",
+    label: "Scenariusz demo: pole rolne w nisko położonych, odwadnianych Żuławach. To podatność regionalna na podtopienia, nie bieżące ostrzeżenie.",
   },
   {
     id: "wielkopolska",
     tone: "drought",
-    problem: "Deficyt wody",
+    problem: "Podatność na suszę",
     region: "Wielkopolska",
-    detail: "Powiat wrzesiński · kukurydza",
+    detail: "Nekla · pole uprawne · kukurydza (scenariusz)",
     crop: "kukorydza",
-    parcelId: null,
-    lat: 52.312,
-    lng: 17.568,
-    label: "Wielkopolska, deficyt wody. Ustaw uprawę kukurydzy i wczytaj działkę w powiecie wrzesińskim.",
+    parcelId: "303003_5.0215.110/10",
+    lat: 52.3505,
+    lng: 17.405,
+    label: "Scenariusz demo: pole uprawne 110/10 w Nekli, w Wielkopolsce — regionie o wysokim zagrożeniu suszą rolniczą. Nie oznacza to bieżącego deficytu wody.",
   },
   {
     id: "kujawy",
     tone: "retention",
-    problem: "Retencja dolinowa",
+    problem: "Potencjał retencji dolinowej",
     region: "Dolina Wisły",
-    detail: "Kujawy · burak cukrowy",
+    detail: "Zławieś Wielka · pole w dolinie Wisły · burak cukrowy (scenariusz)",
     crop: "buraki",
-    parcelId: null,
-    lat: 53.145,
-    lng: 18.215,
-    label: "Dolina Wisły i Kujawy, retencja dolinowa. Ustaw uprawę buraka cukrowego i wczytaj działkę koło Bydgoszczy.",
+    parcelId: "041509_2.0017.452",
+    lat: 53.07765,
+    lng: 18.30921,
+    label: "Scenariusz demo: pole rolne w dolinie Wisły, reprezentujące potencjał retencji dolinowej. Nie jest to bieżące ostrzeżenie powodziowe.",
   },
 ];
 
@@ -119,6 +121,7 @@ type TerrainFlowResult = {
   slope: { meanDeg: number | null; medianDeg: number | null; p90Deg: number | null; maxDeg: number | null };
   flow: {
     outflowExits: Array<{ direction: string; estimatedContributingAreaM2: number }>;
+    outflowPoints: Array<{ lat: number; lng: number; direction: string; estimatedContributingAreaM2: number }>;
     inflowExits: Array<{ direction: string; estimatedContributingAreaM2: number }>;
     concentrationZones: Array<{ lat: number; lng: number; estimatedContributingAreaM2: number }>;
     depressions: Array<{ lat: number; lng: number; areaM2: number; maxFillDepthM: number }>;
@@ -133,6 +136,10 @@ type SatelliteResult = {
   level: "L2A";
   currentImageUrl: string | null;
   historicalImageUrl: string | null;
+  imageBounds: [number, number, number, number] | null;
+  imageWidth: number | null;
+  imageHeight: number | null;
+  geometry: Geometry | null;
   date: string | null;
   cloudCoverPercent: number | null;
   resolutionMeters: number | null;
@@ -155,6 +162,7 @@ type DroughtResult = {
   } | null;
   previewUrl: string | null;
   categoryPercentages: Record<"1" | "2" | "3" | "4", number>;
+  unclassifiedPercentage: number;
   unavailableReason: "classification" | "service" | null;
   precipitation30DaysMm: number | null;
   precipitationDeficitMm: number | null;
@@ -363,8 +371,20 @@ export default function Home() {
         cache: "no-store",
         signal: controller.signal,
       });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error ?? "Nie udało się obliczyć kierunku spływu.");
+      const responseText = await response.text();
+      let result: unknown;
+      try {
+        result = JSON.parse(responseText) as unknown;
+      } catch {
+        const contentType = response.headers.get("content-type") ?? "nieznany format";
+        throw new Error(`Serwer analizy terenu zwrócił nieoczekiwaną odpowiedź (HTTP ${response.status}, ${contentType}). Możliwy timeout lub błąd endpointu.`);
+      }
+      if (!response.ok) {
+        const serverError = result && typeof result === "object" && "error" in result && typeof result.error === "string"
+          ? result.error
+          : "Nie udało się obliczyć kierunku spływu.";
+        throw new Error(serverError);
+      }
       setTerrainFlow(result as TerrainFlowResult);
     } catch (reason) {
       if (!(reason instanceof Error && reason.name === "AbortError")) {
@@ -550,13 +570,13 @@ export default function Home() {
   }
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell${parcel ? " parcel-selected" : ""}`}>
       <header className="hero">
         <div>
           <div className="hero-brand">
             <BrandLogo className="hero-logo" />
             <div>
-              <p className="eyebrow">ASYSTENT WODNY ROLNIKA</p>
+              <p className="eyebrow">TWÓJ ASYSTENT WODNY</p>
               <h1 className="brand-name">Ziemowit</h1>
               <p className="brand-slogan">Grunt to <span>nawodnienie</span></p>
             </div>
@@ -584,11 +604,6 @@ export default function Home() {
               ))}
             </div>
           </div>
-          <ol className="hero-steps" aria-label="Jak to działa">
-            <li><span>1</span>Wybierz działkę</li>
-            <li><span>2</span>Sprawdź pogodę i glebę</li>
-            <li><span>3</span>Otwórz raport wodny</li>
-          </ol>
         </div>
       </header>
       <section className="workspace" aria-label="Wybór działki">
@@ -675,7 +690,7 @@ export default function Home() {
                   {terrainFlow && <span className="terrain-source">siatka co {terrainFlow.sampleSpacingM} m</span>}
                 </div>
                 {terrainFlowLoading ? (
-                  <div className="weather-status"><span className="spinner" /> Analizuję wysokości i drogi spływu…</div>
+                <div className="weather-status"><span className="spinner" /> Analizuję wysokości i drogi spływu…</div>
                 ) : terrainFlowError ? (
                   <div className="weather-error" role="alert">{terrainFlowError}</div>
                 ) : terrainFlow ? (
@@ -711,7 +726,7 @@ export default function Home() {
                     )}
                     <details className="terrain-flow-limitations">
                       <summary>Jak interpretować wynik</summary>
-                      <p>To model potencjalnego spływu z NMT, a nie prognoza ilości wody. Siatka jest próbkowana co {terrainFlow.sampleSpacingM} m, a otoczenie analizowane w buforze {terrainFlow.bufferM} m. Wynik nie uwzględnia rowów, przepustów, upraw ani infiltracji gleby.</p>
+                      <p>Model przedstawia potencjalny spływ z NMT, a nie prognozę ilości wody. Siatka jest próbkowana co {terrainFlow.sampleSpacingM} m, a otoczenie analizowane w buforze {terrainFlow.bufferM} m. Wynik nie uwzględnia rowów, przepustów, upraw ani infiltracji gleby.</p>
                     </details>
                     <p className="terrain-note">Źródło: <a href={terrainFlow.source.url} target="_blank" rel="noreferrer">{terrainFlow.source.name}</a>; źródłowy NMT {terrainFlow.source.nativeResolutionM} m, układ wysokości {terrainFlow.elevationDatum}. Zasilany obszar poza buforem może być niepełny.</p>
                   </>
@@ -737,37 +752,72 @@ export default function Home() {
                   <div className="drought-unavailable">
                     <strong>Brak danych o podatności gleby dla tej lokalizacji.</strong>
                     {drought.unavailableReason === "classification" ? (
-                      <p>Warstwa IUNG nie przypisała działce kategorii I–IV podatności gleby. Działka lub jej część może należeć do gleby organicznej, lasu, wody, zabudowy, nieużytków, terenów komunikacyjnych albo obszaru niesklasyfikowanego.</p>
+                      <p>{drought.unclassifiedPercentage >= 99.9
+                        ? "Cała powierzchnia działki jest nieklasyfikowana przez warstwę IUNG — np. może to być woda, zabudowa, las lub grunt organiczny. Nie przypisujemy jej kategorii podatności I–IV ani nie wyliczamy ryzyka suszy."
+                        : "Warstwa IUNG nie przypisała działce wystarczającej powierzchni do kategorii I–IV podatności gleby. Działka lub jej część może należeć do gleby organicznej, lasu, wody, zabudowy, nieużytków, terenów komunikacyjnych albo obszaru niesklasyfikowanego."}</p>
                     ) : (
                       <p>Usługa IUNG-PIB nie zwróciła w tym momencie prawidłowej warstwy klasyfikacji. Spróbuj ponownie później.</p>
                     )}
                   </div>
                 ) : (
                   <>
-                    <div className="drought-metrics">
-                      <div>
-                        <span className={`drought-value drought-category-${drought.category.code}`}>{drought.category.susceptibility}</span>
-                        <small>Podatność gleby</small>
+                    <div className="drought-layout">
+                      <div className="drought-left">
+                        <div className="drought-metrics">
+                          <div>
+                            <span className="drought-metric-label">Podatność gleby</span>
+                            <span className={`drought-value drought-category-${drought.category.code}`}>{drought.category.susceptibility}</span>
+                          </div>
+                          <div>
+                            <span className="drought-metric-label">Bieżące ryzyko</span>
+                            <span className={`drought-value drought-risk-${drought.currentRisk.replaceAll(" ", "-")}`}>{drought.currentRisk}</span>
+                          </div>
+                        </div>
+                        <div className="drought-breakdown">
+                          <div className="drought-breakdown-heading">
+                            <strong>Struktura działki</strong>
+                            <span>udział kategorii I–IV</span>
+                          </div>
+                          <div className="drought-category-bar" aria-label="Udział kategorii podatności gleby na działce">
+                            {(["1", "2", "3", "4"] as const).map((category) => (
+                              <span
+                                key={category}
+                                className={`drought-category-part drought-legend-${category}`}
+                                style={{ flexGrow: drought.categoryPercentages[category] }}
+                                title={`Kategoria ${category}: ${drought.categoryPercentages[category].toFixed(1)}%`}
+                              />
+                            ))}
+                            {drought.unclassifiedPercentage > 0 && (
+                              <span
+                                className="drought-category-part drought-unclassified-part"
+                                style={{ flexGrow: drought.unclassifiedPercentage }}
+                                title={`Nieklasyfikowane: ${drought.unclassifiedPercentage.toFixed(1)}%`}
+                              />
+                            )}
+                          </div>
+                          <div className="drought-legend" aria-label="Legenda kategorii podatności gleby IUNG">
+                            <span><i className="drought-legend-1" /><b>I</b> Bardzo podatna <strong>{drought.categoryPercentages["1"].toFixed(1)}%</strong></span>
+                            <span><i className="drought-legend-2" /><b>II</b> Podatna <strong>{drought.categoryPercentages["2"].toFixed(1)}%</strong></span>
+                            <span><i className="drought-legend-3" /><b>III</b> Średnio podatna <strong>{drought.categoryPercentages["3"].toFixed(1)}%</strong></span>
+                            <span><i className="drought-legend-4" /><b>IV</b> Mało podatna <strong>{drought.categoryPercentages["4"].toFixed(1)}%</strong></span>
+                            {drought.unclassifiedPercentage > 0 && (
+                              <span className="drought-unclassified-legend"><i className="drought-unclassified-part" /><b>—</b> Nieklasyfikowane <strong>{drought.unclassifiedPercentage.toFixed(1)}%</strong></span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="drought-interpretation-wrap">
+                          <span className="drought-insight-icon" aria-hidden="true">i</span>
+                          <p className="drought-interpretation">{drought.interpretation}</p>
+                        </div>
                       </div>
-                      <div>
-                        <span className={`drought-value drought-risk-${drought.currentRisk.replaceAll(" ", "-")}`}>{drought.currentRisk}</span>
-                        <small>Wskaźnik bieżącego ryzyka</small>
-                      </div>
+                      {drought.previewUrl && (
+                        <figure className="drought-preview">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={drought.previewUrl} alt="Mały wycinek mapy podatności gleby IUNG dla granic działki" />
+                          <figcaption>Wycinek mapy IUNG dla działki</figcaption>
+                        </figure>
+                      )}
                     </div>
-                    {drought.previewUrl && (
-                      <figure className="drought-preview">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={drought.previewUrl} alt="Mały wycinek mapy podatności gleby IUNG dla granic działki" />
-                        <figcaption>Wycinek mapy IUNG dla działki</figcaption>
-                      </figure>
-                    )}
-                    <div className="drought-legend" aria-label="Legenda kategorii podatności gleby IUNG">
-                      <span><i className="drought-legend-1" />I — bardzo podatna <strong>{drought.categoryPercentages["1"].toFixed(1)}%</strong></span>
-                      <span><i className="drought-legend-2" />II — podatna <strong>{drought.categoryPercentages["2"].toFixed(1)}%</strong></span>
-                      <span><i className="drought-legend-3" />III — średnio podatna <strong>{drought.categoryPercentages["3"].toFixed(1)}%</strong></span>
-                      <span><i className="drought-legend-4" />IV — mało podatna <strong>{drought.categoryPercentages["4"].toFixed(1)}%</strong></span>
-                    </div>
-                    <p className="drought-interpretation">{drought.interpretation}</p>
                     {drought.precipitationDeficitMm !== null && drought.precipitationDeficitMm > 0 && (
                       <p className="drought-deficit">Niedobór względem orientacyjnego progu: <strong>{drought.precipitationDeficitMm.toFixed(1)} mm</strong></p>
                     )}
@@ -800,14 +850,14 @@ export default function Home() {
                         {satellite.currentImageUrl && (
                           <figure>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={satellite.currentImageUrl} alt={`Obraz prawdziwokolorowy działki z ${satellite.date ?? "bieżącej obserwacji"}`} />
+                            <SatelliteImage src={satellite.currentImageUrl} alt={`Obraz prawdziwokolorowy działki z ${satellite.date ?? "bieżącej obserwacji"}`} geometry={satellite.geometry} bounds={satellite.imageBounds} imageWidth={satellite.imageWidth} imageHeight={satellite.imageHeight} />
                             <figcaption>Teraz · {satellite.date ?? "brak daty"}</figcaption>
                           </figure>
                         )}
                         {satellite.historicalImageUrl && (
                           <figure>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={satellite.historicalImageUrl} alt="Obraz prawdziwokolorowy działki z roku poprzedniego" />
+                            <SatelliteImage src={satellite.historicalImageUrl} alt="Obraz historyczny działki" geometry={satellite.geometry} bounds={satellite.imageBounds} imageWidth={satellite.imageWidth} imageHeight={satellite.imageHeight} />
                             <figcaption>Rok temu · porównanie sezonowe</figcaption>
                           </figure>
                         )}
@@ -834,8 +884,10 @@ export default function Home() {
           )}
         </div>
         <aside className="details-panel" aria-live="polite">
-          <div className="panel-icon" aria-hidden="true">▧</div>
-          <h2>Wybrana działka</h2>
+          <div className="panel-heading">
+            <div className="panel-icon" aria-hidden="true">▧</div>
+            <h2>Wybrana działka</h2>
+          </div>
           <form className="parcel-search" onSubmit={searchParcel}>
             <label htmlFor="parcel-identifier">Znajdź działkę po numerze</label>
             <div className="search-controls">
@@ -930,7 +982,7 @@ export default function Home() {
                   </li>
                   <li>
                     <GuideIcon><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" /><circle cx="12" cy="10" r="2.2" /></GuideIcon>
-                    <span>Kliknij działkę na mapie, wpisz TERYT lub wybierz scenariusz demo.</span>
+                    <span>Kliknij działkę na mapie, wpisz nr działki lub wybierz scenariusz demo.</span>
                   </li>
                   <li>
                     <GuideIcon><path d="M7 3.5h7.2L19 8.2V20a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 6 20V5A1.5 1.5 0 0 1 7.5 3.5z" /><path d="M14 3.5V8h4.5M8.5 13h7M8.5 17h4.5" /></GuideIcon>
@@ -941,18 +993,17 @@ export default function Home() {
               <div>
                 <h3>Co zawiera raport</h3>
                 <ul className="guide-badges">
-                  <li><i className="guide-dot" aria-hidden="true" />Bilans opadów i ET0</li>
-                  <li><i className="guide-dot guide-dot-soil" aria-hidden="true" />Wilgotność gleby (Sentinel-2)</li>
-                  <li><i className="guide-dot guide-dot-water" aria-hidden="true" />Stan wód i ryzyko (IMGW)</li>
+                  <li><i className="guide-dot" aria-hidden="true" />Bilans opadów i parowania</li>
+                  <li><i className="guide-dot guide-dot-soil" aria-hidden="true" />Wilgotność gleby</li>
+                  <li><i className="guide-dot guide-dot-water" aria-hidden="true" />Wodowskazy i przepływy</li>
                 </ul>
               </div>
               </section>
             </>
           )}
-          <div className="source-box"><span className="source-check">✓</span><p>Dane pobierane na bieżąco z usługi lokalizacji działek GUGiK (ULDK).</p></div>
         </aside>
       </section>
-      <footer><strong>Ziemowit</strong> · grunt to nawodnienie. Wynik lokalizacji ma charakter informacyjny. Granice na mapie pochodzą z ewidencji udostępnianej przez ULDK.</footer>
+      <footer><strong>Ziemowit</strong> · grunt to nawodnienie. Wynik lokalizacji ma charakter informacyjny.</footer>
     </main>
   );
 }

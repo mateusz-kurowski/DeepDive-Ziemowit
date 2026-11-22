@@ -23,6 +23,7 @@ type DroughtResult = {
   category: DroughtCategory | null;
   previewUrl: string | null;
   categoryPercentages: Record<"1" | "2" | "3" | "4", number>;
+  unclassifiedPercentage: number;
   unavailableReason: "classification" | "service" | null;
   crop: string;
   precipitation30DaysMm: number | null;
@@ -99,6 +100,7 @@ async function getSoilCategory(
   category: DroughtCategory | null;
   previewUrl: string | null;
   categoryPercentages: Record<"1" | "2" | "3" | "4", number>;
+  unclassifiedPercentage: number;
 }> {
   const [centerX, centerY] = proj4("EPSG:4326", "EPSG:2180", [lng, lat]) as number[];
   const projectedRings: number[][][] = [];
@@ -125,12 +127,33 @@ async function getSoilCategory(
     ys = [centerY - 250, centerY + 250];
   }
 
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-  const width = 300;
-  const height = 300;
+  let minX = Math.min(...xs);
+  let maxX = Math.max(...xs);
+  let minY = Math.min(...ys);
+  let maxY = Math.max(...ys);
+
+  const parcelWidth = maxX - minX;
+  const parcelHeight = maxY - minY;
+  const parcelWidthWithPadding = parcelWidth * 1.24;
+  const parcelHeightWithPadding = parcelHeight * 1.24;
+  const targetRatio = 16 / 11;
+  let frameWidth = parcelWidthWithPadding;
+  let frameHeight = parcelHeightWithPadding;
+  if (frameWidth / frameHeight < targetRatio) {
+    frameWidth = frameHeight * targetRatio;
+  } else {
+    frameHeight = frameWidth / targetRatio;
+  }
+
+  const frameCenterX = (minX + maxX) / 2;
+  const frameCenterY = (minY + maxY) / 2;
+  minX = frameCenterX - frameWidth / 2;
+  maxX = frameCenterX + frameWidth / 2;
+  minY = frameCenterY - frameHeight / 2;
+  maxY = frameCenterY + frameHeight / 2;
+
+  const width = 640;
+  const height = 440;
   const url = new URL("https://sgeo.iung.pl/geoserver/Susza/wms");
   url.searchParams.set("service", "WMS");
   url.searchParams.set("version", "1.1.1");
@@ -152,6 +175,7 @@ async function getSoilCategory(
     .toBuffer({ resolveWithObject: true });
 
   const counts = new Map<number, number>();
+  let insidePixels = 0;
   const rgba = new Uint8Array(width * height * 4);
   const pixelWidth = (maxX - minX) / width;
   const pixelHeight = (maxY - minY) / height;
@@ -161,6 +185,7 @@ async function getSoilCategory(
       const nativeY = maxY - (y + 0.5) * pixelHeight;
       const [sampleLng, sampleLat] = proj4("EPSG:2180", "EPSG:4326", [nativeX, nativeY]) as number[];
       if (!pointInGeometry(sampleLng, sampleLat, geometry)) continue;
+      insidePixels += 1;
 
       const index = (y * width + x) * 4;
       const red = image.data[index];
@@ -178,7 +203,6 @@ async function getSoilCategory(
     }
   }
 
-  const dominantCode = [...counts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0];
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const pixelIndex = (y * width + x) * 4;
@@ -195,22 +219,37 @@ async function getSoilCategory(
   }
   const png = await sharp(Buffer.from(rgba), {
     raw: { width, height, channels: 4 },
-  }).resize({ width: 220, height: 150, fit: "inside", withoutEnlargement: true }).png().toBuffer();
+  }).resize({
+    width: 220,
+    height: 151,
+    fit: "fill",
+    kernel: "lanczos3",
+  }).png().toBuffer();
   const totalCategoryPixels = [1, 2, 3, 4].reduce(
     (total, code) => total + (counts.get(code) ?? 0),
     0,
   );
   const categoryPercentages = {
-    "1": totalCategoryPixels > 0 ? Number(((counts.get(1) ?? 0) * 100 / totalCategoryPixels).toFixed(1)) : 0,
-    "2": totalCategoryPixels > 0 ? Number(((counts.get(2) ?? 0) * 100 / totalCategoryPixels).toFixed(1)) : 0,
-    "3": totalCategoryPixels > 0 ? Number(((counts.get(3) ?? 0) * 100 / totalCategoryPixels).toFixed(1)) : 0,
-    "4": totalCategoryPixels > 0 ? Number(((counts.get(4) ?? 0) * 100 / totalCategoryPixels).toFixed(1)) : 0,
+    "1": insidePixels > 0 ? Number(((counts.get(1) ?? 0) * 100 / insidePixels).toFixed(1)) : 0,
+    "2": insidePixels > 0 ? Number(((counts.get(2) ?? 0) * 100 / insidePixels).toFixed(1)) : 0,
+    "3": insidePixels > 0 ? Number(((counts.get(3) ?? 0) * 100 / insidePixels).toFixed(1)) : 0,
+    "4": insidePixels > 0 ? Number(((counts.get(4) ?? 0) * 100 / insidePixels).toFixed(1)) : 0,
   };
+  const unclassifiedPercentage = insidePixels > 0
+    ? Number(((insidePixels - totalCategoryPixels) * 100 / insidePixels).toFixed(1))
+    : 0;
+  const classifiedPercentage = insidePixels > 0
+    ? totalCategoryPixels * 100 / insidePixels
+    : 0;
+  const dominantCode = classifiedPercentage >= 1
+    ? [...counts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0]
+    : undefined;
 
   return {
     category: dominantCode ? categoryMap[dominantCode] : null,
     previewUrl: `data:image/png;base64,${png.toString("base64")}`,
     categoryPercentages,
+    unclassifiedPercentage,
   };
 }
 
@@ -219,6 +258,7 @@ function calculateRisk(
   precipitation: number | null,
   minimum: number,
 ): "niski" | "umiarkowany" | "wysoki" | "bardzo wysoki" | "brak danych" {
+  if (!category) return "brak danych";
   if (precipitation === null) return "brak danych";
   const deficit = Math.max(0, minimum - precipitation);
   if (category?.susceptibility === "bardzo wysoka") {
@@ -257,7 +297,7 @@ export async function POST(request: Request) {
     ? body.precipitation30DaysMm
     : null;
   const minimum = cropRainfallMinimum[crop] ?? cropRainfallMinimum.inna;
-  const cacheKey = `${lat.toFixed(4)}:${lng.toFixed(4)}:${crop}:${precipitation ?? "none"}`;
+  const cacheKey = `v4:${lat.toFixed(4)}:${lng.toFixed(4)}:${crop}:${precipitation ?? "none"}:${JSON.stringify(geometry)}`;
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return NextResponse.json(cached.value);
 
@@ -270,6 +310,9 @@ export async function POST(request: Request) {
     let interpretation = "Nie udało się określić podatności gleby ani bieżącego ryzyka.";
     if (category) {
       interpretation = `Podatność gleby dla działki: ${category.name}.`;
+      if (soilData.unclassifiedPercentage > 0) {
+        interpretation += ` Nieklasyfikowane grunty stanowią ${soilData.unclassifiedPercentage.toFixed(1)}% działki i nie zostały zaliczone do kategorii I–IV ani użyte do oceny ich podatności.`;
+      }
       if (precipitation === null) {
         interpretation += " Po pobraniu danych meteo można ocenić dodatkowy niedobór opadów.";
       } else if (deficit !== null && deficit > 0) {
@@ -287,6 +330,7 @@ export async function POST(request: Request) {
       category,
       previewUrl: soilData.previewUrl,
       categoryPercentages: soilData.categoryPercentages,
+      unclassifiedPercentage: soilData.unclassifiedPercentage,
       unavailableReason: category ? null : "classification",
       crop,
       precipitation30DaysMm: precipitation,
@@ -311,6 +355,7 @@ export async function POST(request: Request) {
       category: null,
       previewUrl: null,
       categoryPercentages: { "1": 0, "2": 0, "3": 0, "4": 0 },
+      unclassifiedPercentage: 0,
       unavailableReason: "service",
       crop,
       precipitation30DaysMm: precipitation,
