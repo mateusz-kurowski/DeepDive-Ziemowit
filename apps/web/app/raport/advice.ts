@@ -1,6 +1,7 @@
 import type { HydroResult, SatelliteResult, WeatherResult } from "../types";
 import {
   ADVICE_ID_ORDER,
+  ADVICE_PHASE,
   ADVICE_LIMIT,
   BALANCE,
   cropRule,
@@ -64,6 +65,7 @@ export function selectAdvice(advice: Advice[]): { shown: Advice[]; cut: Advice[]
   let top = advice.slice(0, MAX_ADVICE);
   const crop = advice.find((item) => item.id === "crop");
   if (crop && !top.includes(crop)) top = [...top.slice(0, MAX_ADVICE - 1), crop];
+  top.sort(compareAdvice);
   return { shown: top, cut: advice.filter((item) => !top.includes(item)) };
 }
 
@@ -80,10 +82,14 @@ export function collectAdvice(input: AdviceInput): Advice[] {
   const timed = assessed.summary.verdict.confidence === "low"
     ? blocked.map((item) => (item.timing === "now" && item.id !== "flood" ? { ...item, timing: "week" as const } : item))
     : blocked;
-  return timed.sort((a, b) =>
-    a.priority - b.priority
+  return timed.sort(compareAdvice);
+}
+
+function compareAdvice(a: Advice, b: Advice) {
+  return ADVICE_PHASE[a.id as (typeof ADVICE_ID_ORDER)[number]] - ADVICE_PHASE[b.id as (typeof ADVICE_ID_ORDER)[number]]
+    || a.priority - b.priority
     || TERM_RANK[a.timing] - TERM_RANK[b.timing]
-    || ADVICE_ID_ORDER.indexOf(a.id as (typeof ADVICE_ID_ORDER)[number]) - ADVICE_ID_ORDER.indexOf(b.id as (typeof ADVICE_ID_ORDER)[number]));
+    || ADVICE_ID_ORDER.indexOf(a.id as (typeof ADVICE_ID_ORDER)[number]) - ADVICE_ID_ORDER.indexOf(b.id as (typeof ADVICE_ID_ORDER)[number]);
 }
 
 function composeAdvice(a: Assessment): Advice[] {
