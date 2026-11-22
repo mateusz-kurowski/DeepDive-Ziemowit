@@ -17,16 +17,35 @@ const ParcelMap = dynamic(() => import("../components/ParcelMap"), {
 
 type LoadState<T> = { status: "loading" } | { status: "ready"; data: T } | { status: "error"; message: string };
 
-async function postJson<T>(url: string, body: unknown, signal: AbortSignal): Promise<T> {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    cache: "no-store",
-    signal,
-  });
-  const result = await response.json();
-  if (!response.ok) throw new Error(result.error ?? "Nie udało się pobrać danych.");
+async function postJson<T>(url: string, body: unknown, signal: AbortSignal, fallbackMessage = "Nie udało się pobrać danych. Spróbuj ponownie później.", hideServerError = false): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      cache: "no-store",
+      signal,
+    });
+  } catch (error) {
+    if (signal.aborted) throw error;
+    throw new Error(fallbackMessage);
+  }
+  let text: string;
+  try { text = await response.text(); }
+  catch { throw new Error(fallbackMessage); }
+  let result: unknown;
+  try {
+    result = JSON.parse(text);
+  } catch {
+    throw new Error(fallbackMessage);
+  }
+  if (!response.ok) {
+    const errorValue = result && typeof result === "object" ? (result as { error?: unknown }).error : null;
+    const serverMessage = typeof errorValue === "string" ? errorValue : fallbackMessage;
+    const technicalMessage = /json\.parse|syntaxerror|unexpected (?:character|token)|<!doctype|<html/i.test(serverMessage);
+    throw new Error(hideServerError || technicalMessage ? fallbackMessage : serverMessage);
+  }
   return result as T;
 }
 
@@ -145,7 +164,7 @@ export default function ReportView({ parcelId, point, crop }: {
             geometry: selected.geometry,
             crop,
             weatherAvailable,
-          }, controller.signal);
+          }, controller.signal, "Wskaźniki satelitarne są chwilowo niedostępne. Pozostałe dane raportu są nadal dostępne.", true);
           if (!controller.signal.aborted) setSatellite({ status: "ready", data });
         } catch (reason) {
           if (!controller.signal.aborted) setSatellite({ status: "error", message: errorMessage(reason, "Dane satelitarne niedostępne.") });

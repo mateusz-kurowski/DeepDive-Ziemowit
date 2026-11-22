@@ -102,7 +102,12 @@ async function searchScenes(bbox: [number, number, number, number], start: strin
     cache: "no-store",
   });
   if (!response.ok) throw new Error("Katalog Sentinel-2 nie odpowiada.");
-  const payload = await response.json() as { features?: StacFeature[] };
+  let payload: { features?: StacFeature[] };
+  try {
+    payload = await response.json() as { features?: StacFeature[] };
+  } catch (error) {
+    throw new Error(`Katalog Sentinel-2 zwrócił nieprawidłową odpowiedź: ${error instanceof Error ? error.message : "błąd parsowania JSON"}`);
+  }
   return (payload.features ?? []).sort((left, right) => {
     const leftCloud = left.properties["eo:cloud_cover"] ?? 100;
     const rightCloud = right.properties["eo:cloud_cover"] ?? 100;
@@ -351,12 +356,12 @@ export async function POST(request: Request) {
   const crop = typeof body.crop === "string" && body.crop.trim() ? body.crop.trim() : "other";
   const geometry = body.geometry && typeof body.geometry === "object" ? body.geometry : null;
   const weatherAvailable = body.weatherAvailable === true;
-  const bbox = geometryBbox(geometry, lat, lng);
   const cacheKey = `${lng.toFixed(4)}:${lat.toFixed(4)}:${crop}:${isoDate(new Date())}`;
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return NextResponse.json(cached.value);
 
   try {
+    const bbox = geometryBbox(geometry, lat, lng);
     const today = new Date();
     const currentStart = isoDate(new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000));
     const currentEnd = isoDate(today);
@@ -432,8 +437,9 @@ export async function POST(request: Request) {
     cache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL_MS, value: result });
     return NextResponse.json(result);
   } catch (error) {
+    console.error("[api/satellite] Nie udało się przygotować wskaźników Sentinel-2:", error);
     return NextResponse.json({
-      error: error instanceof Error ? error.message : "Nie udało się pobrać danych satelitarnych.",
+      error: "Dane satelitarne są chwilowo niedostępne. Spróbuj ponownie później.",
     }, { status: 502 });
   }
 }
