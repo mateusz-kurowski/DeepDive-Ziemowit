@@ -203,7 +203,6 @@ async function getSoilCategory(
     }
   }
 
-  const dominantCode = [...counts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0];
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const pixelIndex = (y * width + x) * 4;
@@ -239,6 +238,12 @@ async function getSoilCategory(
   const unclassifiedPercentage = insidePixels > 0
     ? Number(((insidePixels - totalCategoryPixels) * 100 / insidePixels).toFixed(1))
     : 0;
+  const classifiedPercentage = insidePixels > 0
+    ? totalCategoryPixels * 100 / insidePixels
+    : 0;
+  const dominantCode = classifiedPercentage >= 1
+    ? [...counts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0]
+    : undefined;
 
   return {
     category: dominantCode ? categoryMap[dominantCode] : null,
@@ -253,6 +258,7 @@ function calculateRisk(
   precipitation: number | null,
   minimum: number,
 ): "niski" | "umiarkowany" | "wysoki" | "bardzo wysoki" | "brak danych" {
+  if (!category) return "brak danych";
   if (precipitation === null) return "brak danych";
   const deficit = Math.max(0, minimum - precipitation);
   if (category?.susceptibility === "bardzo wysoka") {
@@ -291,7 +297,7 @@ export async function POST(request: Request) {
     ? body.precipitation30DaysMm
     : null;
   const minimum = cropRainfallMinimum[crop] ?? cropRainfallMinimum.inna;
-  const cacheKey = `v3:${lat.toFixed(4)}:${lng.toFixed(4)}:${crop}:${precipitation ?? "none"}:${JSON.stringify(geometry)}`;
+  const cacheKey = `v4:${lat.toFixed(4)}:${lng.toFixed(4)}:${crop}:${precipitation ?? "none"}:${JSON.stringify(geometry)}`;
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return NextResponse.json(cached.value);
 
