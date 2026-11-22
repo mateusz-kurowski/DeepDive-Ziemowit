@@ -13,7 +13,9 @@ import type {
 } from "../types";
 import BrandLogo from "../components/BrandLogo";
 import SatelliteImage from "../components/SatelliteImage";
+import { ADVICE_ID_ORDER, ADVICE_PHASE } from "./advice-config";
 import { buildAdvice, timingLabel, type Advice } from "./advice";
+import type { Cause } from "./assessment";
 import {
   buildSimpleTiles,
   buildSummary,
@@ -809,8 +811,29 @@ export default function ReportView({
       }
     }
     const combinedAdvice = Array.from(adviceMap.values())
-      .sort((a, b) => a.advice.priority - b.advice.priority || TIMING_ORDER[a.advice.timing] - TIMING_ORDER[b.advice.timing])
+      .sort((a, b) => {
+        const phaseA = ADVICE_PHASE[a.advice.id as (typeof ADVICE_ID_ORDER)[number]] ?? 2;
+        const phaseB = ADVICE_PHASE[b.advice.id as (typeof ADVICE_ID_ORDER)[number]] ?? 2;
+        return phaseA - phaseB
+          || a.advice.priority - b.advice.priority
+          || TIMING_ORDER[a.advice.timing] - TIMING_ORDER[b.advice.timing]
+          || ADVICE_ID_ORDER.indexOf(a.advice.id as (typeof ADVICE_ID_ORDER)[number]) - ADVICE_ID_ORDER.indexOf(b.advice.id as (typeof ADVICE_ID_ORDER)[number]);
+      })
       .slice(0, 6);
+
+    const causeMap = new Map<string, { cause: Cause; parcelLabels: string[] }>();
+    for (const item of evaluatedParcels) {
+      for (const cause of item.summary?.causes ?? []) {
+        const key = `${cause.source}::${cause.title}`;
+        const existing = causeMap.get(key);
+        if (!existing) {
+          causeMap.set(key, { cause, parcelLabels: [item.label] });
+        } else if (!existing.parcelLabels.includes(item.label)) {
+          existing.parcelLabels.push(item.label);
+        }
+      }
+    }
+    const combinedCauses = Array.from(causeMap.values());
 
     return {
       worstLevel,
@@ -818,6 +841,7 @@ export default function ReportView({
       description,
       tiles,
       combinedAdvice,
+      combinedCauses,
     };
   }, [isMulti, evaluatedParcels]);
 
@@ -844,6 +868,7 @@ export default function ReportView({
       items.push({ id: "sekcja-porownanie", label: "Porównanie działek" });
     }
     items.push({ id: "sekcja-ostrzezenia", label: "Ostrzeżenia IMGW" });
+    items.push({ id: "sekcja-przyczyny", label: "Przyczyny i dowody" });
     items.push({ id: "sekcja-rekomendacje", label: "Rekomendacje" });
 
     if (!detailed) {
@@ -1205,11 +1230,44 @@ export default function ReportView({
 
           <ImgwWarningsSection imgwWarnings={combinedImgwWarnings} isMulti />
 
+          <section id="sekcja-przyczyny" className="report-card report-block cause-card report-anchor-section" aria-labelledby="combined-cause-title">
+            <div className="report-section-heading">
+              <div>
+                <span className="weather-kicker">ANALIZA · CO MOŻE STAĆ ZA WYNIKIEM</span>
+                <h2 className="report-title" id="combined-cause-title">Możliwe przyczyny i dowody</h2>
+              </div>
+            </div>
+            {aggregateOverview ? (
+              aggregateOverview.combinedCauses.length ? (
+                <ul className="finding-list">
+                  {aggregateOverview.combinedCauses.map(({ cause, parcelLabels }) => (
+                    <li className="finding level-warn" key={`${cause.source}-${cause.title}`}>
+                      <strong>{cause.title}</strong>
+                      <p>{cause.evidence}</p>
+                      <small>
+                        Źródło: {cause.source} · {cause.certainty === "sygnał" ? "sygnał, nie pewna diagnoza" : "ogranicza pewność oceny"}
+                        {" · "}
+                        {parcelLabels.length === evaluatedParcels.length ? "wszystkie działki" : `dotyczy: dz. ${parcelLabels.join(", ")}`}
+                      </small>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="cause-empty">Na podstawie dostępnych danych nie wskazano wyraźnego czynnika ograniczającego wodę w wybranym zestawie działek. Sprawdź też ustalenia pomiarowe poniżej.</p>
+              )
+            ) : evaluatedParcels.some((p) => p.dataLoading) ? (
+              <div className="status-message"><span className="spinner" /> Analizuję możliwe przyczyny i dowody dla wybranych działek…</div>
+            ) : (
+              <p className="report-note">Brak wystarczających danych pomiarowych do wskazania przyczyn.</p>
+            )}
+          </section>
+
           <section id="sekcja-rekomendacje" className="report-card report-block report-anchor-section">
             <div className="report-section-heading">
               <div>
                 <span className="weather-kicker">WSPÓLNY PLAN DZIAŁAŃ · CAŁY ZESTAW</span>
                 <h2 className="report-title">Priorytetowe rekomendacje dla wybranych działek</h2>
+                <p className="advice-order-note">Kolejność: najpierw zatrzymanie wody w krajobrazie i rowach, następnie działania na glebie i uprawie. Nawadnianie pokazujemy na końcu i tylko wtedy, gdy spełnione są warunki dla danej uprawy.</p>
               </div>
               {aggregateOverview && (
                 <span className="weather-source">
@@ -1404,11 +1462,40 @@ function SingleParcelReportContent({
 
       <ImgwWarningsSection imgwWarnings={imgwWarnings} isMulti={false} />
 
+      <section id="sekcja-przyczyny" className="report-card report-block cause-card report-anchor-section" aria-labelledby="cause-title">
+        <div className="report-section-heading">
+          <div>
+            <span className="weather-kicker">ANALIZA · CO MOŻE STAĆ ZA WYNIKIEM</span>
+            <h2 className="report-title" id="cause-title">Możliwe przyczyny i dowody</h2>
+          </div>
+        </div>
+        {summary ? (
+          summary.causes.length ? (
+            <ul className="finding-list">
+              {summary.causes.map((cause) => (
+                <li className="finding level-warn" key={`${cause.source}-${cause.title}`}>
+                  <strong>{cause.title}</strong>
+                  <p>{cause.evidence}</p>
+                  <small>Źródło: {cause.source} · {cause.certainty === "sygnał" ? "sygnał, nie pewna diagnoza" : "ogranicza pewność oceny"}</small>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="cause-empty">Na podstawie dostępnych danych nie wskazano wyraźnego czynnika ograniczającego wodę. Sprawdź też ustalenia pomiarowe poniżej.</p>
+          )
+        ) : dataLoading ? (
+          <div className="status-message"><span className="spinner" /> Analizuję możliwe przyczyny i dowody na podstawie pomiarów…</div>
+        ) : (
+          <p className="report-note">Brak wystarczających danych pomiarowych do wskazania przyczyn.</p>
+        )}
+      </section>
+
       <section id="sekcja-rekomendacje" className="report-card report-block report-anchor-section">
         <div className="report-section-heading">
           <div>
             <span className="weather-kicker">PLAN DZIAŁAŃ · DOBRANY DO TWOJEJ DZIAŁKI</span>
             <h2 className="report-title">Rekomendacje – jak zatrzymać wodę</h2>
+            <p className="advice-order-note">Kolejność: najpierw zatrzymanie wody w krajobrazie i rowach, następnie działania na glebie i uprawie. Nawadnianie pokazujemy na końcu i tylko wtedy, gdy spełnione są warunki dla danej uprawy.</p>
           </div>
           {summary && (
             <span className="weather-source">{advice.length} {advice.length === 1 ? "porada" : advice.length < 5 ? "porady" : "porad"}</span>

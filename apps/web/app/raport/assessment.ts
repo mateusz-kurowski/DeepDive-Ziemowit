@@ -9,6 +9,7 @@ import {
   PRECIP,
   RIVER,
   SCENE,
+  SANDY_TEXTURES,
   SEASON,
   SOIL_ANOMALY_Z,
   SOIL_DROP_PP,
@@ -24,6 +25,7 @@ import {
 
 export type FindingLevel = "good" | "info" | "warn" | "bad";
 export type Finding = { level: FindingLevel; title: string; text: string };
+export type Cause = { title: string; evidence: string; source: string; certainty: "sygnał" | "brak danych" };
 export type VerdictKind = "deficit-high" | "deficit" | "deficit-watch" | "drought-high-water" | "flood" | "wet" | "stable";
 export type SoilStatus = "dry" | "moderate" | "wet" | "unknown";
 export type SignalName = "meteo" | "soil" | "veg";
@@ -42,6 +44,7 @@ export type ReportSummary = {
     surplus: number;
   };
   findings: Finding[];
+  causes: Cause[];
   soil: { status: SoilStatus; smi: number | null; approximate: boolean };
   sceneNote: string | null;
   signals: SignalName[];
@@ -288,7 +291,7 @@ export function assessWater(
   const verdict = describeVerdict({ kind, intense, confidence, stage, deficit, surplus, vegSignal, vegWeak, sceneUsable: scene.usable });
 
   return {
-    summary: { verdict, findings, soil, sceneNote: scene.note, signals },
+    summary: { verdict, findings, causes: identifyCauses(findings, confidence, texture, balanceDeficit > 0), soil, sceneNote: scene.note, signals },
     date,
     month,
     crop,
@@ -569,6 +572,37 @@ function buildFindings(input: {
   }
 
   return findings;
+}
+
+function identifyCauses(findings: Finding[], confidence: "low" | "normal", texture: SoilTexture | null, balanceDeficit: boolean): Cause[] {
+  const causeRules: Array<{ source: string; title: string; matches: (finding: Finding) => boolean }> = [
+    { source: "Opady poniżej normy", title: "Deficyt opadów", matches: (f) => f.title === "Opady poniżej normy" },
+    { source: "Klimatyczny bilans wodny", title: "Niekorzystny bilans opadów i parowania", matches: (f) => f.title === "Klimatyczny bilans wodny" && balanceDeficit },
+    { source: "Wilgotność gleby", title: "Mały zapas wody w strefie korzeniowej", matches: (f) => f.title === "Wilgotność gleby" && f.level === "bad" },
+    { source: "Przepływ w zlewni", title: "Niski przepływ w zlewni", matches: (f) => f.title === "Przepływ w zlewni" && f.level === "warn" },
+    { source: "Długi okres bez opadów", title: "Długi okres bez opadów", matches: (f) => f.title === "Długi okres bez opadów" },
+  ];
+  const causes: Cause[] = causeRules.flatMap((rule) => {
+    const evidence = findings.find(rule.matches);
+    return evidence ? [{ title: rule.title, evidence: evidence.text, source: rule.source, certainty: "sygnał" }] : [];
+  });
+  if (texture && (SANDY_TEXTURES as readonly SoilTexture[]).includes(texture)) {
+    causes.push({
+      title: "Gleba o małej pojemności wodnej",
+      evidence: `Uziarnienie gleby (${TEXTURE_LABEL[texture]}) wskazuje na podatność na szybkie przesychanie; to cecha gleby, nie pomiar jej obecnego nawodnienia.`,
+      source: "Uziarnienie gleby",
+      certainty: "sygnał",
+    });
+  }
+  if (confidence === "low") {
+    causes.push({
+      title: "Niepełne dane lokalne",
+      evidence: "Brakuje danych hydrologicznych albo pomiaru wilgotności gleby; wskazane przyczyny są wstępne.",
+      source: "Niepełne dane",
+      certainty: "brak danych",
+    });
+  }
+  return causes;
 }
 
 function includesMonth(months: readonly number[], month: number) {

@@ -190,6 +190,25 @@ export const ADVICE_ID_ORDER = [
   "humus",
 ] as const;
 
+// Fazy prezentacji odpowiadają logice z PROJEKT.md. Zagrożenia powodziowe
+// pozostają wyjątkiem bezpieczeństwa i są pokazywane przed planem retencji.
+export const ADVICE_PHASE: Record<(typeof ADVICE_ID_ORDER)[number], number> = {
+  flood: 0,
+  "gates-close": 1,
+  "gates-spring": 1,
+  "gates-hold": 1,
+  "forecast-dry": 1,
+  "gates-ready": 1,
+  tillage: 2,
+  "heavy-machinery": 2,
+  "field-check": 2,
+  crop: 2,
+  "cover-crop": 2,
+  "dry-spell-watch": 2,
+  humus: 2,
+  irrigation: 3,
+};
+
 export const PRIORITY = {
   flood: 1,
   gatesCloseHigh: 2,
