@@ -251,6 +251,11 @@ h1 { margin-bottom: 5px; font: 800 1.8125rem/1.2 "Manrope", Arial, sans-serif; l
 .terrain-flow-groups li span:last-child { color: var(--muted); text-align: right; }
 .terrain-flow-groups p { margin: 7px 0 0; color: var(--muted); font-size: .625rem; line-height: 1.45; }
 .terrain-flow-note { margin: 9px 0 0; color: var(--muted); font-size: .625rem; line-height: 1.5; }
+.terrain-waterways { display: grid; gap: 6px; margin-top: 10px; padding: 11px 12px; border: var(--border-width) solid var(--line); border-radius: 10px; background: var(--surface); color: var(--muted); font-size: .625rem; line-height: 1.5; }
+.terrain-waterways > strong { color: var(--ink-2); }
+.terrain-waterways p { margin: 0; }
+.terrain-waterways ul { display: grid; gap: 4px; margin: 0; padding-left: 16px; }
+.terrain-waterways a { color: var(--accent-text); }
 .terrain-flow-limitations { margin-top: 8px; color: var(--muted); font-size: .625rem; }
 .terrain-flow-limitations summary { cursor: pointer; color: var(--accent-text); font-weight: 700; }
 .terrain-flow-limitations p { margin: 6px 0 0; line-height: 1.5; }
