@@ -1645,7 +1645,7 @@ function ImgwWarningsSection({
           ) : <p className="weather-error" role="status">{imgwWarnings.data.meteorological.error}</p>}
           {imgwWarnings.data.hydrological.status === "available" ? (
             <WarningList
-              title={isMulti ? "Ostrzeżenia hydrologiczne · województwa działek" : "Ostrzeżenia hydrologiczne · województwo działki"}
+              title={isMulti ? "Ostrzeżenia hydrologiczne · województwa działek" : "Ostrzeżenia hydrologiczne · województwo"}
               warnings={imgwWarnings.data.hydrological.warnings}
             />
           ) : <p className="weather-error" role="status">{imgwWarnings.data.hydrological.error}</p>}
