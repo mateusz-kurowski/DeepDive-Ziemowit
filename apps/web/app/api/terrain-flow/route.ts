@@ -9,18 +9,10 @@ type Polygon = Ring[];
 type Geometry = { type: "Polygon"; coordinates: Polygon } | { type: "MultiPolygon"; coordinates: Polygon[] };
 
 const HEIGHT_SERVICE = "https://services.gugik.gov.pl/nmt/";
-const OVERPASS_SERVICES = [
-  { name: "Overpass · Private.coffee", url: "https://overpass.private.coffee/api/interpreter" },
-  { name: "Overpass · FOSSGIS", url: "https://overpass-api.de/api/interpreter" },
-];
-const OVERPASS_TOTAL_TIMEOUT_MS = 8_000;
-const OVERPASS_ATTEMPT_TIMEOUT_MS = 5_500;
 const BUFFER_M = 50;
-const WATERWAY_SEARCH_M = 1000;
-const WATERWAY_MATCH_M = 150;
 const TARGET_MAX_SAMPLES = 6000;
 const MIN_SAMPLE_SPACING_M = 2;
-const GRID_CACHE_VERSION = "grid-6000-2m-waterway-v2";
+const GRID_CACHE_VERSION = "grid-6000-2m-v3";
 const LIST_BATCH_SIZE = 200;
 const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 const cache = new Map<string, { expiresAt: number; value: Record<string, unknown> }>();
@@ -120,173 +112,6 @@ async function fetchHeights(points: Array<{ x: number; y: number }>): Promise<nu
 }
 
 type HeapEntry = { index: number; height: number; order: number };
-type Waterway = { id: number; name: string | null; type: string; coordinates: Position[] };
-
-function pointSegmentDistance(point: Position, start: Position, end: Position): number {
-  const dx = end[0] - start[0];
-  const dy = end[1] - start[1];
-  const lengthSquared = dx * dx + dy * dy;
-  if (lengthSquared === 0) return Math.hypot(point[0] - start[0], point[1] - start[1]);
-  const t = Math.max(0, Math.min(1, ((point[0] - start[0]) * dx + (point[1] - start[1]) * dy) / lengthSquared));
-  return Math.hypot(point[0] - (start[0] + t * dx), point[1] - (start[1] + t * dy));
-}
-
-function orientation(a: Position, b: Position, c: Position): number {
-  return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
-}
-
-function segmentsIntersect(a: Position, b: Position, c: Position, d: Position): boolean {
-  const abC = orientation(a, b, c);
-  const abD = orientation(a, b, d);
-  const cdA = orientation(c, d, a);
-  const cdB = orientation(c, d, b);
-  const epsilon = 1e-8;
-  const onSegment = (start: Position, end: Position, point: Position) =>
-    point[0] >= Math.min(start[0], end[0]) - epsilon && point[0] <= Math.max(start[0], end[0]) + epsilon
-    && point[1] >= Math.min(start[1], end[1]) - epsilon && point[1] <= Math.max(start[1], end[1]) + epsilon;
-  if (Math.abs(abC) <= epsilon && onSegment(a, b, c)) return true;
-  if (Math.abs(abD) <= epsilon && onSegment(a, b, d)) return true;
-  if (Math.abs(cdA) <= epsilon && onSegment(c, d, a)) return true;
-  if (Math.abs(cdB) <= epsilon && onSegment(c, d, b)) return true;
-  return ((abC < 0 && abD > 0) || (abC > 0 && abD < 0))
-    && ((cdA < 0 && cdB > 0) || (cdA > 0 && cdB < 0));
-}
-
-function segmentDistance(a: Position, b: Position, c: Position, d: Position): number {
-  if (segmentsIntersect(a, b, c, d)) return 0;
-  return Math.min(
-    pointSegmentDistance(a, c, d), pointSegmentDistance(b, c, d),
-    pointSegmentDistance(c, a, b), pointSegmentDistance(d, a, b),
-  );
-}
-
-function distanceToNetwork(point: Position, waterways: Waterway[]): { distanceM: number; waterway: Waterway } | null {
-  let nearest: { distanceM: number; waterway: Waterway } | null = null;
-  for (const waterway of waterways) for (let i = 1; i < waterway.coordinates.length; i += 1) {
-    const distanceM = pointSegmentDistance(point, waterway.coordinates[i - 1], waterway.coordinates[i]);
-    if (!nearest || distanceM < nearest.distanceM) nearest = { distanceM, waterway };
-  }
-  return nearest;
-}
-
-async function fetchOverpass(query: string): Promise<unknown> {
-  const failures: string[] = [];
-  const deadline = Date.now() + OVERPASS_TOTAL_TIMEOUT_MS;
-  for (const service of OVERPASS_SERVICES) {
-    const remainingMs = deadline - Date.now();
-    if (remainingMs <= 0) break;
-    try {
-      const response = await fetch(service.url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-          Accept: "application/json",
-          "User-Agent": "Ziemowit/1.0 (+https://github.com/mateusz-kurowski/HackNation-2026-proj2)",
-        },
-        body: new URLSearchParams({ data: query }),
-        signal: AbortSignal.timeout(Math.min(OVERPASS_ATTEMPT_TIMEOUT_MS, remainingMs)),
-        cache: "no-store",
-      });
-      if (!response.ok) {
-        failures.push(`${service.name}: HTTP ${response.status}`);
-        if (response.status === 406 || response.status === 429 || response.status >= 500) continue;
-        throw new Error(`OpenStreetMap zwrócił HTTP ${response.status}.`);
-      }
-      const payload = await response.json() as { remark?: string };
-      if (payload.remark) {
-        failures.push(`${service.name}: ${payload.remark.slice(0, 160)}`);
-        continue;
-      }
-      return payload;
-    } catch (error) {
-      const isTimeout = error instanceof Error && (error.name === "TimeoutError" || /timeout|timed out|aborted/i.test(error.message));
-      failures.push(`${service.name}: ${isTimeout ? "timeout" : error instanceof Error ? error.message : "błąd połączenia"}`);
-    }
-  }
-  throw new Error(`Nie udało się pobrać sieci wodnej z żadnej usługi Overpass (${failures.join("; ")}).`);
-}
-
-async function fetchWaterways(bounds: { minX: number; minY: number; maxX: number; maxY: number }): Promise<Waterway[]> {
-  const corners: Position[] = [
-    [bounds.minX - WATERWAY_SEARCH_M, bounds.minY - WATERWAY_SEARCH_M],
-    [bounds.minX - WATERWAY_SEARCH_M, bounds.maxY + WATERWAY_SEARCH_M],
-    [bounds.maxX + WATERWAY_SEARCH_M, bounds.minY - WATERWAY_SEARCH_M],
-    [bounds.maxX + WATERWAY_SEARCH_M, bounds.maxY + WATERWAY_SEARCH_M],
-  ].map(([x, y]) => proj4("EPSG:2180", "EPSG:4326", [x, y]) as Position);
-  const south = Math.min(...corners.map(([, lat]) => lat));
-  const north = Math.max(...corners.map(([, lat]) => lat));
-  const west = Math.min(...corners.map(([lng]) => lng));
-  const east = Math.max(...corners.map(([lng]) => lng));
-  const query = `[out:json][timeout:6];way["waterway"~"^(river|stream|canal|ditch|drain)$"](${south},${west},${north},${east});out tags geom;`;
-  const payload = await fetchOverpass(query) as { elements?: Array<{ type?: string; id?: number; tags?: Record<string, string>; geometry?: Array<{ lon?: number; lat?: number }> }> };
-  return (payload.elements ?? []).flatMap((element) => {
-    if (element.type !== "way" || !Number.isFinite(element.id) || !Array.isArray(element.geometry)) return [];
-    const coordinates = element.geometry.flatMap(({ lon, lat }) => typeof lon === "number" && Number.isFinite(lon) && typeof lat === "number" && Number.isFinite(lat)
-      ? [proj4("EPSG:4326", "EPSG:2180", [lon, lat]) as Position]
-      : []);
-    if (coordinates.length < 2) return [];
-    return [{
-      id: element.id!,
-      name: element.tags?.name ?? null,
-      type: element.tags?.waterway ?? "unknown",
-      coordinates,
-    }];
-  });
-}
-
-function analyzeWaterways(
-  waterways: Waterway[],
-  polygons: Polygon[],
-  outflowPoints: Array<{ lat: number; lng: number; direction: string; estimatedContributingAreaM2: number }>,
-) {
-  const rings = polygons.flatMap((polygon) => polygon);
-  const nearestToParcel = waterways.map((waterway) => {
-    let distanceM = Number.POSITIVE_INFINITY;
-    for (const linePoint of waterway.coordinates) {
-      if (pointInGeometry(linePoint[0], linePoint[1], polygons)) distanceM = 0;
-    }
-    for (let i = 1; i < waterway.coordinates.length && distanceM > 0; i += 1) {
-      for (const ring of rings) {
-        for (let j = 1; j < ring.length; j += 1) {
-          distanceM = Math.min(distanceM, segmentDistance(waterway.coordinates[i - 1], waterway.coordinates[i], ring[j - 1], ring[j]));
-          if (distanceM === 0) break;
-        }
-        if (distanceM === 0) break;
-      }
-    }
-    return { waterway, distanceM };
-  }).filter(({ distanceM }) => distanceM <= WATERWAY_SEARCH_M)
-    .sort((a, b) => a.distanceM - b.distanceM);
-  const connections = outflowPoints.map((exit) => {
-    const point = proj4("EPSG:4326", "EPSG:2180", [exit.lng, exit.lat]) as Position;
-    const nearest = distanceToNetwork(point, waterways);
-    return nearest ? {
-      direction: exit.direction,
-      estimatedContributingAreaM2: exit.estimatedContributingAreaM2,
-      distanceM: Math.round(nearest.distanceM),
-      waterway: { name: nearest.waterway.name, type: nearest.waterway.type },
-      withinMatchDistance: nearest.distanceM <= WATERWAY_MATCH_M,
-    } : null;
-  }).filter((connection): connection is NonNullable<typeof connection> => connection !== null);
-  return {
-    status: "available" as const,
-    source: { name: "© OpenStreetMap contributors", url: "https://www.openstreetmap.org/copyright" },
-    searchRadiusM: WATERWAY_SEARCH_M,
-    nearbyCount: nearestToParcel.length,
-    nearest: nearestToParcel[0] ? {
-      name: nearestToParcel[0].waterway.name,
-      type: nearestToParcel[0].waterway.type,
-      distanceM: Math.round(nearestToParcel[0].distanceM),
-    } : null,
-    outflowConnections: connections,
-    limitations: [
-      "Sieć wodna pochodzi z OpenStreetMap; brak obiektu w danych nie potwierdza braku cieku w terenie.",
-      "Bliskość cieku lub kierunek spływu nie potwierdzają hydraulicznego połączenia ani ryzyka zalania.",
-      "Analiza obejmuje rzeki, strumienie, kanały i oznaczone rowy w zasięgu 1 km; obiekty mogą być niekompletne lub nieaktualne.",
-    ],
-  };
-}
-
 function heapPush(heap: HeapEntry[], entry: HeapEntry) {
   let i = heap.length;
   heap.push(entry);
@@ -588,25 +413,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `NMT zwrócił tylko ${available} z ${heights.length} wysokości; to za mało do wyznaczenia spływu.` }, { status: 502 });
     }
     const incomplete = heights.filter(Number.isFinite).length < heights.length;
-    let waterways: ReturnType<typeof analyzeWaterways> | { status: "unavailable"; source: { name: string; url: string }; error: string; limitations: string[] };
-    try {
-      const features = await fetchWaterways({ minX: minVertexX, minY: minVertexY, maxX: maxVertexX, maxY: maxVertexY });
-      waterways = analyzeWaterways(features, polygons2180, summary.flow.outflowPoints);
-    } catch (error) {
-      waterways = {
-        status: "unavailable",
-        source: { name: "© OpenStreetMap contributors", url: "https://www.openstreetmap.org/copyright" },
-        error: error instanceof Error ? error.message : "Nie udało się pobrać sieci wodnej.",
-        limitations: ["Dane cieków nie były dostępne; analiza rzeźby terenu została wykonana niezależnie."],
-      };
-    }
     const result = {
       status: incomplete ? "partial" : "available",
       sampleSpacingM: step,
       bufferM: BUFFER_M,
       elevationDatum: "PL-KRON86-NH",
       source: { name: "GUGiK NMT", url: "https://services.gugik.gov.pl/nmt/", nativeResolutionM: 1 },
-      waterways,
       ...summary,
       limitations: [
         "Analiza wykorzystuje siatkę próbkowania o podanym odstępie, a nie każdą komórkę źródłowego NMT.",

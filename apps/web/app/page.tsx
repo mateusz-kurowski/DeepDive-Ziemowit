@@ -126,28 +126,8 @@ type TerrainFlowResult = {
     concentrationZones: Array<{ lat: number; lng: number; estimatedContributingAreaM2: number }>;
     depressions: Array<{ lat: number; lng: number; areaM2: number; maxFillDepthM: number }>;
   };
-  waterways: {
-    status: "available" | "unavailable";
-    source: { name: string; url: string };
-    searchRadiusM?: number;
-    nearbyCount?: number;
-    nearest?: { name: string | null; type: string; distanceM: number } | null;
-    outflowConnections?: Array<{
-      direction: string;
-      estimatedContributingAreaM2: number;
-      distanceM: number;
-      waterway: { name: string | null; type: string };
-      withinMatchDistance: boolean;
-    }>;
-    error?: string;
-    limitations: string[];
-  };
   limitations: string[];
 };
-
-function waterwayTypeLabel(type: string) {
-  return ({ river: "rzeka", stream: "strumień", canal: "kanał", ditch: "rów", drain: "rów odpływowy" } as Record<string, string>)[type] ?? "ciek wodny";
-}
 
 type SatelliteResult = {
   status: "available" | "partial" | "unavailable";
@@ -710,7 +690,7 @@ export default function Home() {
                   {terrainFlow && <span className="terrain-source">siatka co {terrainFlow.sampleSpacingM} m</span>}
                 </div>
                 {terrainFlowLoading ? (
-                  <div className="weather-status"><span className="spinner" /> Analizuję wysokości, cieki i drogi spływu…</div>
+                <div className="weather-status"><span className="spinner" /> Analizuję wysokości i drogi spływu…</div>
                 ) : terrainFlowError ? (
                   <div className="weather-error" role="alert">{terrainFlowError}</div>
                 ) : terrainFlow ? (
@@ -741,33 +721,12 @@ export default function Home() {
                         ) : <p>Nie wykryto zamkniętych obniżeń przekraczających próg analizy.</p>}
                       </div>
                     </div>
-                    <div className="terrain-waterways" aria-label="Cieki wodne i ich relacja ze spływem">
-                      <strong>Cieki wodne w okolicy</strong>
-                      {terrainFlow.waterways.status === "unavailable" ? (
-                        <p className="soil-unavailable">Dane sieci wodnej są chwilowo niedostępne{terrainFlow.waterways.error ? `: ${terrainFlow.waterways.error}` : "."} Analiza NMT nie została przerwana.</p>
-                      ) : (
-                        <>
-                          {terrainFlow.waterways.nearest ? (
-                            <p>Najbliższy obiekt w danych: {terrainFlow.waterways.nearest.name ?? `nienazwany ${waterwayTypeLabel(terrainFlow.waterways.nearest.type)}`}, około {terrainFlow.waterways.nearest.distanceM.toLocaleString("pl-PL")} m od działki. Wyszukano {terrainFlow.waterways.nearbyCount} obiektów w promieniu 1 km.</p>
-                          ) : <p>Nie znaleziono obiektów sieci wodnej w danych OpenStreetMap w promieniu 1 km.</p>}
-                          {terrainFlow.waterways.outflowConnections?.length ? (
-                            <ul>{terrainFlow.waterways.outflowConnections.map((connection, index) => (
-                              <li key={`${connection.direction}-${index}`}>
-                                Odpływ {connection.direction}: najbliższy {connection.waterway.name ?? waterwayTypeLabel(connection.waterway.type)} w odległości około {connection.distanceM.toLocaleString("pl-PL")} m{connection.withinMatchDistance ? " — bliskość może wskazywać potencjalny związek przestrzenny" : ""}.
-                              </li>
-                            ))}</ul>
-                          ) : <p>Model nie wyznaczył punktów odpływu, które można porównać z siecią wodną.</p>}
-                          <p>Źródło: <a href={terrainFlow.waterways.source.url} target="_blank" rel="noreferrer">{terrainFlow.waterways.source.name}</a>. Bliskość nie potwierdza rzeczywistego połączenia hydraulicznego.</p>
-                        </>
-                      )}
-                    </div>
                     {terrainFlow.flow.concentrationZones.length > 0 && (
                       <p className="terrain-flow-note">Możliwe korytarze koncentracji spływu: {terrainFlow.flow.concentrationZones.map((zone) => `około ${zone.estimatedContributingAreaM2.toLocaleString("pl-PL")} m² zasilania`).join("; ")}.</p>
                     )}
                     <details className="terrain-flow-limitations">
                       <summary>Jak interpretować wynik</summary>
-                      <p>To model potencjalnego spływu z NMT, a nie prognoza ilości wody. Siatka jest próbkowana co {terrainFlow.sampleSpacingM} m, a otoczenie analizowane w buforze {terrainFlow.bufferM} m. Sieć cieków służy do porównania odległości od wyjść spływu i nie zmienia obliczeń D8. Wynik nie uwzględnia hydraulicznie rowów, przepustów, upraw ani infiltracji gleby.</p>
-                      {terrainFlow.waterways.limitations.map((limitation) => <p key={limitation}>{limitation}</p>)}
+                      <p>Model przedstawia potencjalny spływ z NMT, a nie prognozę ilości wody. Siatka jest próbkowana co {terrainFlow.sampleSpacingM} m, a otoczenie analizowane w buforze {terrainFlow.bufferM} m. Wynik nie uwzględnia rowów, przepustów, upraw ani infiltracji gleby.</p>
                     </details>
                     <p className="terrain-note">Źródło: <a href={terrainFlow.source.url} target="_blank" rel="noreferrer">{terrainFlow.source.name}</a>; źródłowy NMT {terrainFlow.source.nativeResolutionM} m, układ wysokości {terrainFlow.elevationDatum}. Zasilany obszar poza buforem może być niepełny.</p>
                   </>
