@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import type { HydroResult, HydroStation, ParcelResult, SatelliteResult, WeatherResult } from "../types";
 import BrandLogo from "../components/BrandLogo";
+import SatelliteImage from "../components/SatelliteImage";
 import { buildAdvice, timingLabel } from "./advice";
 import { buildSimpleTiles, buildSummary } from "./findings";
 
@@ -447,14 +448,14 @@ export default function ReportView({ parcelId, point, crop }: {
                 {satellite.data.currentImageUrl && (
                   <figure>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={satellite.data.currentImageUrl} alt={`Obraz prawdziwokolorowy działki z ${satellite.data.date ?? "bieżącej obserwacji"}`} />
+                    <SatelliteImage src={satellite.data.currentImageUrl} alt={`Obraz prawdziwokolorowy działki z ${satellite.data.date ?? "bieżącej obserwacji"}`} geometry={satellite.data.geometry} bounds={satellite.data.imageBounds} imageWidth={satellite.data.imageWidth} imageHeight={satellite.data.imageHeight} />
                     <figcaption>Teraz · {satellite.data.date ?? "brak daty"}</figcaption>
                   </figure>
                 )}
                 {satellite.data.historicalImageUrl && (
                   <figure>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={satellite.data.historicalImageUrl} alt="Obraz prawdziwokolorowy działki z roku poprzedniego" />
+                    <SatelliteImage src={satellite.data.historicalImageUrl} alt="Obraz historyczny działki" geometry={satellite.data.geometry} bounds={satellite.data.imageBounds} imageWidth={satellite.data.imageWidth} imageHeight={satellite.data.imageHeight} />
                     <figcaption>Rok temu · porównanie sezonowe</figcaption>
                   </figure>
                 )}

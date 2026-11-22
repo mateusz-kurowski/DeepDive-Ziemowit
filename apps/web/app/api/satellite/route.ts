@@ -31,6 +31,10 @@ type SatelliteResult = {
   level: "L2A";
   currentImageUrl: string | null;
   historicalImageUrl: string | null;
+  imageBounds: [number, number, number, number] | null;
+  imageWidth: number | null;
+  imageHeight: number | null;
+  geometry: Geometry | null;
   date: string | null;
   cloudCoverPercent: number | null;
   resolutionMeters: number | null;
@@ -64,6 +68,41 @@ function isoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+function paddedBbox(bbox: [number, number, number, number]): [number, number, number, number] {
+  const longitudePadding = (bbox[2] - bbox[0]) * 0.12;
+  const latitudePadding = (bbox[3] - bbox[1]) * 0.12;
+  const padded: [number, number, number, number] = [
+    bbox[0] - longitudePadding,
+    bbox[1] - latitudePadding,
+    bbox[2] + longitudePadding,
+    bbox[3] + latitudePadding,
+  ];
+
+  const west = padded[0];
+  const south = padded[1];
+  const east = padded[2];
+  const north = padded[3];
+  const centerLatitude = (south + north) / 2;
+  const widthMeters = (east - west) * 111320 * Math.cos(centerLatitude * Math.PI / 180);
+  const heightMeters = (north - south) * 111320;
+  const targetRatio = 16 / 11;
+  let [frameWest, frameSouth, frameEast, frameNorth] = padded;
+
+  if (widthMeters / heightMeters < targetRatio) {
+    const requiredWidthMeters = heightMeters * targetRatio;
+    const requiredWidthDegrees = requiredWidthMeters / (111320 * Math.cos(centerLatitude * Math.PI / 180));
+    frameWest = (west + east - requiredWidthDegrees) / 2;
+    frameEast = (west + east + requiredWidthDegrees) / 2;
+  } else if (widthMeters / heightMeters > targetRatio) {
+    const requiredHeightMeters = widthMeters / targetRatio;
+    const requiredHeightDegrees = requiredHeightMeters / 111320;
+    frameSouth = (south + north - requiredHeightDegrees) / 2;
+    frameNorth = (south + north + requiredHeightDegrees) / 2;
+  }
+
+  return [frameWest, frameSouth, frameEast, frameNorth];
+}
+
 function pointInRing(x: number, y: number, ring: number[][]): boolean {
   let inside = false;
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
@@ -86,6 +125,7 @@ function pointInGeometry(x: number, y: number, geometry: Geometry | null): boole
   const coordinates = geometry.coordinates as number[][][][];
   return coordinates.some((polygon) => pointInRing(x, y, polygon[0]));
 }
+
 
 async function searchScenes(bbox: [number, number, number, number], start: string, end: string): Promise<StacFeature[]> {
   const response = await fetch("https://earth-search.aws.element84.com/v1/search", {
@@ -243,7 +283,7 @@ async function createParcelImage(
   item: StacFeature,
   geometry: Geometry | null,
   bbox: [number, number, number, number],
-): Promise<string | null> {
+): Promise<{ url: string; width: number; height: number } | null> {
   const visualAsset = item.assets.visual;
   const epsg = item.properties["proj:epsg"];
   if (!visualAsset?.href || !epsg) return null;
@@ -260,8 +300,9 @@ async function createParcelImage(
         : `+proj=utm +zone=${epsg - 32600} +datum=WGS84 +units=m +no_defs`,
     );
 
-    const [minXNative, minYNative] = transformer.forward([bbox[0], bbox[1]]) as number[];
-    const [maxXNative, maxYNative] = transformer.forward([bbox[2], bbox[3]]) as number[];
+    const imageBounds = paddedBbox(bbox);
+    const [minXNative, minYNative] = transformer.forward([imageBounds[0], imageBounds[1]]) as number[];
+    const [maxXNative, maxYNative] = transformer.forward([imageBounds[2], imageBounds[3]]) as number[];
     const pixelXSize = resolution[0];
     const pixelYSize = resolution[1];
     const left = Math.max(0, Math.floor((Math.min(minXNative, maxXNative) - origin[0]) / pixelXSize));
@@ -286,19 +327,27 @@ async function createParcelImage(
         const targetIndex = (y * width + x) * 4;
         const nativeX = origin[0] + (left + x + 0.5) * pixelXSize;
         const nativeY = origin[1] + (top + y + 0.5) * pixelYSize;
-        const [lng, lat] = transformer.inverse([nativeX, nativeY]) as number[];
-        const insideParcel = pointInGeometry(lng, lat, geometry);
         rgba[targetIndex] = pixels[sourceIndex] > 255 ? Math.round(pixels[sourceIndex] / 256) : pixels[sourceIndex];
         rgba[targetIndex + 1] = pixels[sourceIndex + 1] > 255 ? Math.round(pixels[sourceIndex + 1] / 256) : pixels[sourceIndex + 1];
         rgba[targetIndex + 2] = pixels[sourceIndex + 2] > 255 ? Math.round(pixels[sourceIndex + 2] / 256) : pixels[sourceIndex + 2];
-        rgba[targetIndex + 3] = insideParcel ? 255 : 0;
+        rgba[targetIndex + 3] = 255;
       }
     }
 
-    const png = await sharp(Buffer.from(rgba), {
+    const resized = await sharp(Buffer.from(rgba), {
       raw: { width, height, channels: 4 },
-    }).resize({ width: 320, height: 220, fit: "inside", withoutEnlargement: true }).png().toBuffer();
-    return `data:image/png;base64,${png.toString("base64")}`;
+    }).resize({
+      width: 640,
+      height: 440,
+      fit: "fill",
+      kernel: "lanczos3",
+      withoutEnlargement: false,
+    }).png().toBuffer({ resolveWithObject: true });
+    return {
+      url: `data:image/png;base64,${resized.data.toString("base64")}`,
+      width: resized.info.width,
+      height: resized.info.height,
+    };
   } catch {
     return null;
   }
@@ -356,7 +405,7 @@ export async function POST(request: Request) {
   const crop = typeof body.crop === "string" && body.crop.trim() ? body.crop.trim() : "other";
   const geometry = body.geometry && typeof body.geometry === "object" ? body.geometry : null;
   const weatherAvailable = body.weatherAvailable === true;
-  const cacheKey = `${lng.toFixed(4)}:${lat.toFixed(4)}:${crop}:${isoDate(new Date())}`;
+  const cacheKey = `v5:${lng.toFixed(4)}:${lat.toFixed(4)}:${crop}:${JSON.stringify(geometry)}:${isoDate(new Date())}`;
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return NextResponse.json(cached.value);
 
@@ -383,6 +432,10 @@ export async function POST(request: Request) {
         level: "L2A",
         currentImageUrl: null,
         historicalImageUrl: null,
+        imageBounds: null,
+        imageWidth: null,
+        imageHeight: null,
+        geometry,
         date: null,
         cloudCoverPercent: null,
         resolutionMeters: null,
@@ -404,7 +457,7 @@ export async function POST(request: Request) {
     const difference = current.ndvi !== null && historical !== null && historical.ndvi !== null
       ? Number((current.ndvi - historical.ndvi).toFixed(3))
       : null;
-    const [currentImageUrl, historicalImageUrl] = await Promise.all([
+    const [currentImage, historicalImage] = await Promise.all([
       createParcelImage(currentItem, geometry, bbox),
       historicalItem ? createParcelImage(historicalItem, geometry, bbox) : Promise.resolve(null),
     ]);
@@ -414,8 +467,12 @@ export async function POST(request: Request) {
       provider: "Earth Search",
       satellite: "Sentinel-2",
       level: "L2A",
-      currentImageUrl,
-      historicalImageUrl,
+      currentImageUrl: currentImage?.url ?? null,
+      historicalImageUrl: historicalImage?.url ?? null,
+      imageBounds: paddedBbox(bbox),
+      imageWidth: currentImage?.width ?? historicalImage?.width ?? null,
+      imageHeight: currentImage?.height ?? historicalImage?.height ?? null,
+      geometry,
       date: currentItem.properties.datetime?.slice(0, 10) ?? null,
       cloudCoverPercent: currentItem.properties["eo:cloud_cover"] != null
         ? Number(currentItem.properties["eo:cloud_cover"].toFixed(2))
