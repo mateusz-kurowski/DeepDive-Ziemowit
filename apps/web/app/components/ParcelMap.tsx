@@ -51,10 +51,19 @@ function FitParcels({ parcels, fitTrigger }: { parcels: ParcelResult[]; fitTrigg
       }
     }
     if (combinedBounds.isValid()) {
-      map.stop();
-      map.fitBounds(combinedBounds, {
-        padding: parcels.length > 1 ? [40, 40] : [32, 32],
-        maxZoom: 17,
+      map.whenReady(() => {
+        if (!map.getContainer()?.isConnected) return;
+        try {
+          map.stop();
+          map.invalidateSize({ animate: false });
+          map.fitBounds(combinedBounds, {
+            padding: parcels.length > 1 ? [40, 40] : [32, 32],
+            maxZoom: 17,
+            animate: false,
+          });
+        } catch {
+          // Ignore transient Leaflet pane lifecycle races during rapid tab switches
+        }
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -194,15 +194,6 @@ type DroughtResult = {
   interpretation: string;
 };
 
-type ParcelSlot = {
-  slotId: string;
-  parcel: ParcelResult | null;
-  searchText: string;
-  searchError: string;
-  candidates: ParcelResult[];
-  loading: boolean;
-};
-
 type ParcelAnalysisCacheEntry = {
   weather?: WeatherResult;
   soilTexture?: SoilTextureResult;
@@ -211,23 +202,19 @@ type ParcelAnalysisCacheEntry = {
   satelliteByCrop: Record<string, SatelliteResult>;
 };
 
-function createEmptySlot(slotId: string): ParcelSlot {
-  return {
-    slotId,
-    parcel: null,
-    searchText: "",
-    searchError: "",
-    candidates: [],
-    loading: false,
-  };
-}
-
 export default function Home() {
-  const [slots, setSlots] = useState<ParcelSlot[]>(() => [createEmptySlot("slot-1")]);
-  const [activeSlotId, setActiveSlotId] = useState<string>("slot-1");
+  const [selectedParcels, setSelectedParcels] = useState<ParcelResult[]>([]);
+  const [activeParcelId, setActiveParcelId] = useState<string | null>(null);
+  const [isAddingAnother, setIsAddingAnother] = useState(false);
+  const [armMultiAfterFirst, setArmMultiAfterFirst] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [searchError, setSearchError] = useState("");
+  const [candidates, setCandidates] = useState<ParcelResult[]>([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [outsidePoland, setOutsidePoland] = useState(false);
   const [duplicateNotice, setDuplicateNotice] = useState("");
+
   const [weather, setWeather] = useState<WeatherResult | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState("");
@@ -248,9 +235,7 @@ export default function Home() {
   const [fitTrigger, setFitTrigger] = useState(0);
   const [activeScenario, setActiveScenario] = useState<string | null>(null);
 
-  const nextSlotCounterRef = useRef(2);
-  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const pendingFocusSlotRef = useRef<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const analysisCacheRef = useRef<Record<string, ParcelAnalysisCacheEntry>>({});
   const activeParcelIdRef = useRef<string | null>(null);
 
@@ -261,61 +246,23 @@ export default function Home() {
   const satelliteRequestRef = useRef<AbortController | null>(null);
   const droughtRequestRef = useRef<AbortController | null>(null);
 
-  const selectedParcels = useMemo(() => {
-    const seen = new Set<string>();
-    const list: ParcelResult[] = [];
-    for (const slot of slots) {
-      if (slot.parcel && !seen.has(slot.parcel.id)) {
-        seen.add(slot.parcel.id);
-        list.push(slot.parcel);
-      }
-    }
-    return list;
-  }, [slots]);
-
-  const activeSlot = useMemo(
-    () => slots.find((slot) => slot.slotId === activeSlotId) ?? slots[0],
-    [slots, activeSlotId],
-  );
-
   const parcel = useMemo(
-    () => activeSlot?.parcel ?? selectedParcels[0] ?? null,
-    [activeSlot, selectedParcels],
+    () => selectedParcels.find((item) => item.id === activeParcelId) ?? selectedParcels[0] ?? null,
+    [selectedParcels, activeParcelId],
   );
 
   activeParcelIdRef.current = parcel?.id ?? null;
 
-  const waitingEmptySlot = useMemo(
-    () => slots.find((slot) => slot.slotId === activeSlotId && slot.parcel === null)
-      ?? slots.find((slot) => slot.parcel === null)
-      ?? null,
-    [slots, activeSlotId],
-  );
-
-  const anyLoading = slots.some((slot) => slot.loading);
-  const anyCandidates = slots.some((slot) => slot.candidates.length > 0);
-  const isMultiSelector = slots.length > 1;
   const isMultiSelected = selectedParcels.length > 1;
+  const shouldAppendOnSelect = isAddingAnother || isMultiSelected || armMultiAfterFirst;
 
   const multiSummary = useMemo(() => {
     if (selectedParcels.length <= 1) return null;
     const communes = Array.from(new Set(selectedParcels.map((item) => item.commune).filter(Boolean)));
-    const counties = Array.from(new Set(selectedParcels.map((item) => item.county).filter(Boolean)));
-    const voivodeships = Array.from(new Set(selectedParcels.map((item) => item.voivodeship).filter(Boolean)));
     return {
       communesLabel: communes.length > 0 ? communes.join(", ") : "Brak danych",
-      countiesLabel: counties.length > 0 ? counties.join(", ") : "Brak danych",
-      voivodeshipsLabel: voivodeships.length > 0 ? voivodeships.join(", ") : "Brak danych",
     };
   }, [selectedParcels]);
-
-  useEffect(() => {
-    if (pendingFocusSlotRef.current) {
-      const slotId = pendingFocusSlotRef.current;
-      pendingFocusSlotRef.current = null;
-      inputRefs.current[slotId]?.focus();
-    }
-  }, [slots]);
 
   useEffect(() => () => {
     requestRef.current?.abort();
@@ -419,10 +366,7 @@ export default function Home() {
     }
   }
 
-  async function fetchWeather(
-    selected: ParcelResult,
-    selectedCrop = crop,
-  ) {
+  async function fetchWeather(selected: ParcelResult, selectedCrop = crop) {
     if (selected.lat == null || selected.lng == null) return;
     weatherRequestRef.current?.abort();
     const controller = new AbortController();
@@ -669,102 +613,119 @@ export default function Home() {
     }
   }
 
-  function switchActiveParcelBySlot(slotId: string) {
-    setDuplicateNotice("");
-    setActiveSlotId(slotId);
-    const targetSlot = slots.find((item) => item.slotId === slotId);
-    const nextParcel = targetSlot?.parcel ?? selectedParcels[0] ?? null;
-    loadAnalysisForParcel(nextParcel, crop);
-  }
-
   function switchActiveParcelById(parcelId: string) {
-    const matchingSlot = slots.find((item) => item.parcel?.id === parcelId);
-    if (matchingSlot) {
-      switchActiveParcelBySlot(matchingSlot.slotId);
+    setDuplicateNotice("");
+    setActiveParcelId(parcelId);
+    const target = selectedParcels.find((item) => item.id === parcelId) ?? null;
+    if (!isAddingAnother && target && selectedParcels.length === 1) {
+      setSearchText(target.id);
     }
+    loadAnalysisForParcel(target, crop);
   }
 
-  function addParcelSlot() {
+  function startAddingAnotherParcel() {
     setDuplicateNotice("");
     setError("");
-    const existingEmptyAdded = slots.length > 1 ? slots.find((slot) => slot.parcel === null) : null;
-    if (existingEmptyAdded) {
-      setActiveSlotId(existingEmptyAdded.slotId);
-      inputRefs.current[existingEmptyAdded.slotId]?.focus();
+    setSearchError("");
+    setCandidates([]);
+    if (selectedParcels.length === 0) {
+      setArmMultiAfterFirst(true);
+      searchInputRef.current?.focus();
       return;
     }
-    const newSlotId = `slot-${nextSlotCounterRef.current}`;
-    nextSlotCounterRef.current += 1;
-    pendingFocusSlotRef.current = newSlotId;
-    setSlots((prev) => [...prev, createEmptySlot(newSlotId)]);
-    setActiveSlotId(newSlotId);
+    setIsAddingAnother(true);
+    setSearchText("");
+    requestAnimationFrame(() => searchInputRef.current?.focus());
   }
 
-  function removeParcelSlot(slotId: string) {
+  function cancelAddingAnotherParcel() {
+    setIsAddingAnother(false);
+    setArmMultiAfterFirst(false);
+    setSearchError("");
+    setCandidates([]);
+    if (selectedParcels.length === 1) {
+      setSearchText(selectedParcels[0].id);
+    } else {
+      setSearchText("");
+    }
+  }
+
+  function removeParcelById(parcelId: string) {
     setDuplicateNotice("");
     setError("");
-    const remaining = slots.filter((slot) => slot.slotId !== slotId);
+    const remaining = selectedParcels.filter((item) => item.id !== parcelId);
+    setSelectedParcels(remaining);
+
     if (remaining.length === 0) {
-      const fresh = createEmptySlot(`slot-${nextSlotCounterRef.current}`);
-      nextSlotCounterRef.current += 1;
-      setSlots([fresh]);
-      setActiveSlotId(fresh.slotId);
+      setActiveParcelId(null);
+      setIsAddingAnother(false);
+      setArmMultiAfterFirst(false);
+      setSearchText("");
       setActiveScenario(null);
       resetAnalysisDisplay();
       return;
     }
 
-    setSlots(remaining);
-    if (activeSlotId === slotId) {
-      const nextSlot = remaining.find((slot) => slot.parcel !== null) ?? remaining[0];
-      setActiveSlotId(nextSlot.slotId);
-      loadAnalysisForParcel(nextSlot.parcel, crop);
+    if (remaining.length === 1 && !isAddingAnother) {
+      setSearchText(remaining[0].id);
     }
-    if (remaining.some((slot) => slot.parcel !== null)) {
-      setMapFocus(null);
+
+    if (activeParcelId === parcelId) {
+      const next = remaining[0];
+      setActiveParcelId(next.id);
+      loadAnalysisForParcel(next, crop);
     }
+    setMapFocus(null);
   }
 
-  function assignParcelToSlot(targetSlotId: string, selected: ParcelResult, selectedCrop = crop) {
-    const isDuplicateInOtherSlot = slots.some(
-      (slot) => slot.slotId !== targetSlotId && slot.parcel?.id === selected.id,
-    );
-    if (isDuplicateInOtherSlot) {
-      const message = `Działka ${selected.parcel} (${selected.id}) jest już na liście wybranych działek.`;
-      setDuplicateNotice(message);
-      setSlots((prev) => prev.map((slot) => (
-        slot.slotId === targetSlotId
-          ? { ...slot, loading: false, searchError: message }
-          : slot
-      )));
+  function commitSelectedParcel(selected: ParcelResult, selectedCrop = crop) {
+    const appendMode = isAddingAnother || selectedParcels.length > 1 || armMultiAfterFirst;
+
+    if (appendMode && selectedParcels.some((item) => item.id === selected.id)) {
+      const msg = `Działka ${selected.parcel} (${selected.id}) jest już na liście wybranych działek.`;
+      setDuplicateNotice(msg);
+      setSearchError(msg);
+      setLoading(false);
       return;
     }
 
     setDuplicateNotice("");
     setError("");
     setOutsidePoland(false);
-    setSlots((prev) => prev.map((slot) => (
-      slot.slotId === targetSlotId
-        ? {
-            ...slot,
-            parcel: selected,
-            searchText: selected.id,
-            searchError: "",
-            candidates: [],
-            loading: false,
-          }
-        : slot
-    )));
-    setActiveSlotId(targetSlotId);
-    const otherParcelsCount = slots.filter((slot) => slot.slotId !== targetSlotId && slot.parcel !== null).length;
-    if (otherParcelsCount > 0) {
-      setMapFocus(null);
+    setSearchError("");
+    setCandidates([]);
+    setLoading(false);
+
+    if (selectedParcels.length === 0 && armMultiAfterFirst) {
+      setSelectedParcels([selected]);
+      setActiveParcelId(selected.id);
+      setArmMultiAfterFirst(false);
+      setIsAddingAnother(true);
+      setSearchText("");
+      loadAnalysisForParcel(selected, selectedCrop);
+      return;
     }
+
+    if (appendMode) {
+      const nextList = [...selectedParcels, selected];
+      setSelectedParcels(nextList);
+      setActiveParcelId(selected.id);
+      setIsAddingAnother(false);
+      setSearchText("");
+      setMapFocus(null);
+      loadAnalysisForParcel(selected, selectedCrop);
+      return;
+    }
+
+    // Domyślny flow pojedynczej działki (1 działka, bez kliknięcia "+ Dodaj kolejną działkę")
+    setSelectedParcels([selected]);
+    setActiveParcelId(selected.id);
+    setSearchText(selected.id);
     loadAnalysisForParcel(selected, selectedCrop);
   }
 
   function handleMapParcelClick(clickedParcel: ParcelResult) {
-    if (waitingEmptySlot) {
+    if (isAddingAnother) {
       setDuplicateNotice(`Działka ${clickedParcel.parcel} (${clickedParcel.id}) jest już wybrana — wskaż inną działkę na mapie.`);
       return;
     }
@@ -774,32 +735,22 @@ export default function Home() {
   }
 
   async function selectPoint(lat: number, lng: number, selectedCrop = crop, scenarioId: string | null = null) {
-    const targetSlot = waitingEmptySlot ?? activeSlot ?? slots[0];
-    const targetSlotId = targetSlot.slotId;
-    const otherParcelsExist = slots.some((slot) => slot.slotId !== targetSlotId && slot.parcel !== null);
-
+    const appendMode = isAddingAnother || selectedParcels.length > 1 || armMultiAfterFirst;
     setActiveScenario(scenarioId);
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
 
+    setLoading(true);
     setError("");
     setOutsidePoland(false);
     setDuplicateNotice("");
+    setSearchError("");
+    setCandidates([]);
 
-    setSlots((prev) => prev.map((slot) => (
-      slot.slotId === targetSlotId
-        ? {
-            ...slot,
-            loading: true,
-            searchError: "",
-            candidates: [],
-            parcel: otherParcelsExist ? slot.parcel : null,
-          }
-        : slot
-    )));
-
-    if (!otherParcelsExist) {
+    if (!appendMode) {
+      setSelectedParcels([]);
+      setActiveParcelId(null);
       resetAnalysisDisplay();
     }
 
@@ -815,82 +766,51 @@ export default function Home() {
       if (!response.ok) throw new Error(result.error ?? "Nie udało się znaleźć działki.");
       const found = result as ParcelResult;
 
-      const duplicateElsewhere = slots.some(
-        (slot) => slot.slotId !== targetSlotId && slot.parcel?.id === found.id,
-      );
-      if (duplicateElsewhere) {
+      if (appendMode && selectedParcels.some((item) => item.id === found.id)) {
         setDuplicateNotice(`Działka ${found.parcel} (${found.id}) jest już na liście wybranych działek.`);
-        setSlots((prev) => prev.map((slot) => (
-          slot.slotId === targetSlotId ? { ...slot, loading: false } : slot
-        )));
         return;
       }
 
-      assignParcelToSlot(targetSlotId, found, selectedCrop);
+      commitSelectedParcel(found, selectedCrop);
     } catch (reason) {
       if (!(reason instanceof Error && reason.name === "AbortError")) {
         setActiveScenario(null);
-        const msg = reason instanceof Error ? reason.message : "Wystąpił nieznany błąd.";
-        setError(msg);
-        setSlots((prev) => prev.map((slot) => (
-          slot.slotId === targetSlotId ? { ...slot, loading: false } : slot
-        )));
+        setError(reason instanceof Error ? reason.message : "Wystąpił nieznany błąd.");
       }
     } finally {
       if (requestRef.current === controller) {
         requestRef.current = null;
+        setLoading(false);
       }
     }
   }
 
-  async function searchParcelForSlot(event: FormEvent<HTMLFormElement>, slotId: string) {
+  async function searchParcel(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const target = slots.find((slot) => slot.slotId === slotId);
-    const identifier = target?.searchText.trim() ?? "";
+    const identifier = searchText.trim();
     if (!identifier) {
-      setSlots((prev) => prev.map((slot) => (
-        slot.slotId === slotId ? { ...slot, searchError: "Wpisz identyfikator działki." } : slot
-      )));
+      setSearchError("Wpisz identyfikator działki.");
       return;
     }
-    await loadParcelByIdentifier(identifier, crop, null, slotId);
+    await loadParcelByIdentifier(identifier);
   }
 
-  async function loadParcelByIdentifier(
-    identifier: string,
-    selectedCrop = crop,
-    scenarioId: string | null = null,
-    explicitSlotId?: string,
-  ) {
-    const targetSlot = (explicitSlotId ? slots.find((s) => s.slotId === explicitSlotId) : null)
-      ?? waitingEmptySlot
-      ?? activeSlot
-      ?? slots[0];
-    const targetSlotId = targetSlot.slotId;
-    const otherParcelsExist = slots.some((slot) => slot.slotId !== targetSlotId && slot.parcel !== null);
-
+  async function loadParcelByIdentifier(identifier: string, selectedCrop = crop, scenarioId: string | null = null) {
+    const appendMode = isAddingAnother || selectedParcels.length > 1 || armMultiAfterFirst;
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
 
+    setLoading(true);
     setError("");
     setDuplicateNotice("");
+    setSearchError("");
     setActiveScenario(scenarioId);
+    setCandidates([]);
 
-    setSlots((prev) => prev.map((slot) => (
-      slot.slotId === targetSlotId
-        ? {
-            ...slot,
-            searchText: identifier,
-            loading: true,
-            searchError: "",
-            candidates: [],
-            parcel: otherParcelsExist ? slot.parcel : null,
-          }
-        : slot
-    )));
-
-    if (!otherParcelsExist) {
+    if (!appendMode) {
+      setSelectedParcels([]);
+      setActiveParcelId(null);
       resetAnalysisDisplay();
     }
 
@@ -906,54 +826,50 @@ export default function Home() {
       const matches = result.parcels as ParcelResult[];
       const exact = matches.find((match) => match.id === identifier);
       if (exact) {
-        assignParcelToSlot(targetSlotId, exact, selectedCrop);
+        commitSelectedParcel(exact, selectedCrop);
       } else if (matches.length === 1) {
-        assignParcelToSlot(targetSlotId, matches[0], selectedCrop);
+        commitSelectedParcel(matches[0], selectedCrop);
       } else {
-        setSlots((prev) => prev.map((slot) => (
-          slot.slotId === targetSlotId
-            ? { ...slot, loading: false, candidates: matches }
-            : slot
-        )));
+        setCandidates(matches);
       }
     } catch (reason) {
       if (!(reason instanceof Error && reason.name === "AbortError")) {
         setActiveScenario(null);
-        const msg = reason instanceof Error ? reason.message : "Wystąpił nieznany błąd.";
-        setSlots((prev) => prev.map((slot) => (
-          slot.slotId === targetSlotId
-            ? { ...slot, loading: false, searchError: msg }
-            : slot
-        )));
+        setSearchError(reason instanceof Error ? reason.message : "Wystąpił nieznany błąd.");
       }
     } finally {
       if (requestRef.current === controller) {
         requestRef.current = null;
+        setLoading(false);
       }
     }
   }
 
   function openScenario(scenario: DemoScenario) {
-    const targetSlot = waitingEmptySlot ?? activeSlot ?? slots[0];
-    const otherParcelsExist = slots.some((slot) => slot.slotId !== targetSlot.slotId && slot.parcel !== null);
-    if (scenario.parcelId && slots.some((slot) => slot.slotId !== targetSlot.slotId && slot.parcel?.id === scenario.parcelId)) {
+    const appendMode = isAddingAnother || selectedParcels.length > 1 || armMultiAfterFirst;
+    if (appendMode && scenario.parcelId && selectedParcels.some((item) => item.id === scenario.parcelId)) {
       setDuplicateNotice(`Działka ${scenario.parcelId} ze scenariusza demo jest już wybrana.`);
       return;
     }
 
     setCrop(scenario.crop);
-    if (!otherParcelsExist) {
+    if (!appendMode && selectedParcels.length === 0) {
+      setMapFocus({ lat: scenario.lat, lng: scenario.lng, zoom: 16, token: Date.now() });
+    } else if (!appendMode) {
       setMapFocus({ lat: scenario.lat, lng: scenario.lng, zoom: 16, token: Date.now() });
     } else {
       setMapFocus(null);
     }
 
     if (scenario.parcelId) {
-      void loadParcelByIdentifier(scenario.parcelId, scenario.crop, scenario.id, targetSlot.slotId);
+      setSearchText(scenario.parcelId);
+      void loadParcelByIdentifier(scenario.parcelId, scenario.crop, scenario.id);
     } else {
       void selectPoint(scenario.lat, scenario.lng, scenario.crop, scenario.id);
     }
   }
+
+  const showSearchInput = selectedParcels.length <= 1 || isAddingAnother;
 
   return (
     <main className={`app-shell${selectedParcels.length > 0 ? " parcel-selected" : ""}`}>
@@ -974,11 +890,10 @@ export default function Home() {
             <p className="demo-scenarios-label" id="demo-scenarios-label">SCENARIUSZE DEMO</p>
             <div className="demo-scenarios-grid" role="group" aria-labelledby="demo-scenarios-label">
               {DEMO_SCENARIOS.map((scenario) => {
-                const targetSlot = waitingEmptySlot ?? activeSlot ?? slots[0];
-                const alreadyInOtherSlot = Boolean(
-                  isMultiSelector
+                const alreadySelected = Boolean(
+                  shouldAppendOnSelect
                   && scenario.parcelId
-                  && slots.some((slot) => slot.slotId !== targetSlot.slotId && slot.parcel?.id === scenario.parcelId),
+                  && selectedParcels.some((item) => item.id === scenario.parcelId),
                 );
                 return (
                   <button
@@ -987,8 +902,8 @@ export default function Home() {
                     className={`demo-scenario demo-scenario-${scenario.tone}`}
                     aria-pressed={activeScenario === scenario.id}
                     aria-label={scenario.label}
-                    disabled={alreadyInOtherSlot}
-                    title={alreadyInOtherSlot ? "Ta działka jest już dodana do listy wybranych działek" : undefined}
+                    disabled={alreadySelected}
+                    title={alreadySelected ? "Ta działka jest już na liście wybranych działek" : undefined}
                     onClick={() => openScenario(scenario)}
                   >
                     <span className="demo-scenario-kicker">{scenario.problem}</span>
@@ -996,7 +911,7 @@ export default function Home() {
                     <small>{scenario.detail}</small>
                     {scenario.parcelId && (
                       <small className="demo-scenario-parcel">
-                        Działka {scenario.parcelId}{alreadyInOtherSlot ? " (wybrana)" : ""}
+                        Działka {scenario.parcelId}{alreadySelected ? " (wybrana)" : ""}
                       </small>
                     )}
                   </button>
@@ -1012,25 +927,25 @@ export default function Home() {
             <div>
               <h2>Wybierz działkę</h2>
               <p>
-                {waitingEmptySlot && selectedParcels.length > 0
-                  ? "Kliknij na mapie kolejną działkę, aby dodać ją do zestawu, albo wyszukaj ją po numerze w panelu."
+                {isAddingAnother
+                  ? "Kliknij na mapie kolejną działkę, aby dodać ją do zestawu, albo wyszukaj ją po numerze obok."
                   : isMultiSelected
-                    ? `Zaznaczono ${polishParcelsCount(selectedParcels.length)}. Kliknij wybrany poligon, aby przełączyć podgląd analizy.`
+                    ? `Zaznaczono ${polishParcelsCount(selectedParcels.length)}. Kliknij wybrany poligon, aby przełączyć podgląd, albo wskaż kolejną działkę.`
                     : "Kliknij w granicach działki albo wybierz scenariusz demo powyżej."}
               </p>
             </div>
             <div className="map-heading-actions">
-              {selectedParcels.length > 0 && (
+              {selectedParcels.length > 0 && !isAddingAnother && (
                 <button
                   type="button"
                   className="map-add-parcel-btn"
-                  onClick={addParcelSlot}
+                  onClick={startAddingAnotherParcel}
                 >
                   + Dodaj kolejną działkę
                 </button>
               )}
-              <span className={`map-hint${waitingEmptySlot && selectedParcels.length > 0 ? " map-hint-active" : ""}`}>
-                {waitingEmptySlot && selectedParcels.length > 0 ? "⌖ Wskaż kolejną działkę" : "⌖ Kliknij punkt na mapie"}
+              <span className={`map-hint${isAddingAnother ? " map-hint-active" : ""}`}>
+                {isAddingAnother ? "⌖ Wskaż kolejną działkę" : "⌖ Kliknij punkt na mapie"}
               </span>
             </div>
           </div>
@@ -1362,169 +1277,146 @@ export default function Home() {
           </div>
 
           <div className="parcel-selector-section">
-            {slots.map((slot, index) => {
-              const inputId = index === 0 ? "parcel-identifier" : `parcel-identifier-${slot.slotId}`;
-              const isSlotActive = slot.slotId === activeSlot.slotId;
-              return (
-                <div
-                  key={slot.slotId}
-                  className={`parcel-slot${isMultiSelector ? " parcel-slot-multi" : ""}${isSlotActive && isMultiSelector ? " parcel-slot-active" : ""}`}
-                >
-                  <form className="parcel-search" onSubmit={(event) => searchParcelForSlot(event, slot.slotId)}>
-                    <div className="parcel-slot-header">
-                      <label htmlFor={inputId}>
-                        {isMultiSelector ? `Działka ${index + 1}` : "Znajdź działkę po numerze"}
-                      </label>
-                      {isMultiSelector && (
-                        <div className="parcel-slot-meta">
-                          {slot.parcel ? (
-                            <button
-                              type="button"
-                              className={`slot-status-pill${parcel?.id === slot.parcel.id ? " active" : ""}`}
-                              onClick={() => switchActiveParcelBySlot(slot.slotId)}
-                            >
-                              Dz. {slot.parcel.parcel}
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              className={`slot-map-pick-btn${waitingEmptySlot?.slotId === slot.slotId ? " active" : ""}`}
-                              onClick={() => setActiveSlotId(slot.slotId)}
-                            >
-                              ⌖ Wskaż na mapie
-                            </button>
-                          )}
+            {(isMultiSelected || (selectedParcels.length === 1 && isAddingAnother)) && (
+              <div className="selected-parcels-box" aria-label="Lista aktualnie wybranych działek">
+                <div className="selected-parcels-head">
+                  <span>Wybrane ({selectedParcels.length})</span>
+                  {isMultiSelected && (
+                    <button
+                      type="button"
+                      className="fit-all-link"
+                      onClick={() => {
+                        setMapFocus(null);
+                        setFitTrigger((value) => value + 1);
+                      }}
+                    >
+                      Pokaż całość
+                    </button>
+                  )}
+                </div>
+                <div className="selected-parcel-chips">
+                  {selectedParcels.map((item) => {
+                    const isActive = parcel?.id === item.id;
+                    return (
+                      <div key={item.id} className={`selected-parcel-chip${isActive ? " active" : ""}`}>
+                        <button
+                          type="button"
+                          className="selected-parcel-chip-select"
+                          onClick={() => switchActiveParcelById(item.id)}
+                          title={`Pokaż szczegóły działki ${item.parcel} (${item.id})`}
+                        >
+                          <strong>Dz. {item.parcel}</strong>
+                          {item.commune && <small>{item.commune}</small>}
+                        </button>
+                        {(selectedParcels.length > 1 || isAddingAnother) && (
                           <button
                             type="button"
-                            className="slot-remove-btn"
-                            onClick={() => removeParcelSlot(slot.slotId)}
-                            aria-label={slot.parcel ? `Usuń działkę ${slot.parcel.parcel}` : `Usuń wiersz działki ${index + 1}`}
-                            title="Usuń działkę z listy"
+                            className="selected-parcel-chip-remove"
+                            onClick={() => removeParcelById(item.id)}
+                            aria-label={`Usuń działkę ${item.parcel}`}
+                            title="Usuń działkę"
                           >
                             ×
                           </button>
-                        </div>
-                      )}
-                    </div>
-                    <div className="search-controls">
-                      <input
-                        id={inputId}
-                        ref={(el) => { inputRefs.current[slot.slotId] = el; }}
-                        value={slot.searchText}
-                        onFocus={() => {
-                          if (slot.parcel === null) setActiveSlotId(slot.slotId);
-                        }}
-                        onChange={(event) => {
-                          const value = event.target.value;
-                          setSlots((prev) => prev.map((item) => (
-                            item.slotId === slot.slotId ? { ...item, searchText: value, searchError: "" } : item
-                          )));
-                        }}
-                        placeholder={index === 0 ? "np. Krzewina 134" : "Kolejna działka lub kliknij mapę"}
-                        autoComplete="off"
-                      />
-                      <button type="submit" disabled={slot.loading} aria-label="Szukaj działki">
-                        {slot.loading ? "…" : "Szukaj"}
-                      </button>
-                    </div>
-                    {index === 0 && !isMultiSelector && (
-                      <p className="search-help">Wpisz pełny identyfikator albo nazwę obrębu i numer.</p>
-                    )}
-                    {slot.searchError && <p className="search-error" role="alert">{slot.searchError}</p>}
-                  </form>
-
-                  {slot.candidates.length > 0 && (
-                    <div className="candidate-list" aria-live="polite">
-                      <p>Znaleziono kilka działek. Wybierz właściwą:</p>
-                      {slot.candidates.map((candidate) => {
-                        const alreadyChosen = slots.some(
-                          (other) => other.slotId !== slot.slotId && other.parcel?.id === candidate.id,
-                        );
-                        return (
-                          <button
-                            type="button"
-                            className={`candidate-option${alreadyChosen ? " candidate-option-disabled" : ""}`}
-                            key={candidate.id}
-                            disabled={alreadyChosen}
-                            onClick={() => assignParcelToSlot(slot.slotId, candidate)}
-                          >
-                            <div className="candidate-option-head">
-                              <strong>{candidate.parcel}</strong>
-                              {alreadyChosen && <em className="candidate-taken-badge">Już wybrana</em>}
-                            </div>
-                            <span>{[candidate.commune, candidate.county, candidate.voivodeship].filter(Boolean).join(", ")}</span>
-                            <small>{candidate.id}</small>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-
-            <button
-              type="button"
-              className="add-parcel-button"
-              onClick={addParcelSlot}
-            >
-              + Dodaj kolejną działkę
-            </button>
-          </div>
-
-          {isMultiSelected && (
-            <div className="selected-parcels-box" aria-label="Lista aktualnie wybranych działek">
-              <div className="selected-parcels-head">
-                <span>Wybrane działki ({selectedParcels.length})</span>
-                <button
-                  type="button"
-                  className="fit-all-link"
-                  onClick={() => {
-                    setMapFocus(null);
-                    setFitTrigger((value) => value + 1);
-                  }}
-                >
-                  Pokaż całość
-                </button>
+                {multiSummary && !isAddingAnother && (
+                  <p className="multi-summary-note">
+                    Gminy: <strong>{multiSummary.communesLabel}</strong>
+                  </p>
+                )}
               </div>
-              <div className="selected-parcel-chips">
-                {slots.filter((slot) => slot.parcel !== null).map((slot) => {
-                  const item = slot.parcel!;
-                  const isActive = parcel?.id === item.id;
-                  return (
-                    <div
-                      key={slot.slotId}
-                      className={`selected-parcel-chip${isActive ? " active" : ""}`}
-                    >
+            )}
+
+            {showSearchInput && (
+              <div className={isAddingAnother ? "parcel-slot parcel-slot-multi parcel-slot-active" : "parcel-slot"}>
+                <form className="parcel-search" onSubmit={searchParcel}>
+                  <div className="parcel-slot-header">
+                    <label htmlFor="parcel-identifier">
+                      {isAddingAnother
+                        ? `Kolejna działka (#${selectedParcels.length + 1})`
+                        : armMultiAfterFirst
+                          ? "Pierwsza działka z zestawu"
+                          : "Znajdź działkę po numerze"}
+                    </label>
+                    {(isAddingAnother || armMultiAfterFirst) && (
                       <button
                         type="button"
-                        className="selected-parcel-chip-select"
-                        onClick={() => switchActiveParcelBySlot(slot.slotId)}
-                        title={`Pokaż szczegóły działki ${item.parcel} (${item.id})`}
-                      >
-                        <strong>Dz. {item.parcel}</strong>
-                        {item.commune && <small>{item.commune}</small>}
-                      </button>
-                      <button
-                        type="button"
-                        className="selected-parcel-chip-remove"
-                        onClick={() => removeParcelSlot(slot.slotId)}
-                        aria-label={`Usuń działkę ${item.parcel}`}
-                        title="Usuń działkę"
+                        className="slot-remove-btn"
+                        onClick={cancelAddingAnotherParcel}
+                        aria-label="Anuluj dodawanie kolejnej działki"
+                        title="Anuluj dodawanie"
                       >
                         ×
                       </button>
-                    </div>
-                  );
-                })}
+                    )}
+                  </div>
+                  <div className="search-controls">
+                    <input
+                      id="parcel-identifier"
+                      ref={searchInputRef}
+                      value={searchText}
+                      onChange={(event) => {
+                        setSearchText(event.target.value);
+                        setSearchError("");
+                      }}
+                      placeholder={isAddingAnother ? "Wpisz nr lub kliknij na mapie" : "np. Krzewina 134"}
+                      autoComplete="off"
+                    />
+                    <button type="submit" disabled={loading} aria-label="Szukaj działki">
+                      {loading ? "…" : "Szukaj"}
+                    </button>
+                  </div>
+                  {!isAddingAnother && selectedParcels.length === 0 && (
+                    <p className="search-help">
+                      {armMultiAfterFirst
+                        ? "Wybierz pierwszą działkę na mapie lub po numerze, a od razu dodasz kolejną."
+                        : "Wpisz pełny identyfikator albo nazwę obrębu i numer."}
+                    </p>
+                  )}
+                  {searchError && <p className="search-error" role="alert">{searchError}</p>}
+                </form>
+
+                {candidates.length > 0 && (
+                  <div className="candidate-list" aria-live="polite">
+                    <p>Znaleziono kilka działek. Wybierz właściwą:</p>
+                    {candidates.map((candidate) => {
+                      const alreadyChosen = shouldAppendOnSelect && selectedParcels.some((item) => item.id === candidate.id);
+                      return (
+                        <button
+                          type="button"
+                          className={`candidate-option${alreadyChosen ? " candidate-option-disabled" : ""}`}
+                          key={candidate.id}
+                          disabled={alreadyChosen}
+                          onClick={() => commitSelectedParcel(candidate)}
+                        >
+                          <div className="candidate-option-head">
+                            <strong>{candidate.parcel}</strong>
+                            {alreadyChosen && <em className="candidate-taken-badge">Już wybrana</em>}
+                          </div>
+                          <span>{[candidate.commune, candidate.county, candidate.voivodeship].filter(Boolean).join(", ")}</span>
+                          <small>{candidate.id}</small>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-              {multiSummary && (
-                <p className="multi-summary-note">
-                  Gminy: <strong>{multiSummary.communesLabel}</strong> · kliknij pigułkę, aby przełączyć podgląd poniżej.
-                </p>
-              )}
-            </div>
-          )}
+            )}
+
+            {!isAddingAnother && (
+              <button
+                type="button"
+                className="add-parcel-button"
+                onClick={startAddingAnotherParcel}
+              >
+                + Dodaj kolejną działkę
+              </button>
+            )}
+          </div>
 
           <div className="crop-select">
             <label htmlFor="crop-type">Aktualna uprawa</label>
@@ -1550,35 +1442,34 @@ export default function Home() {
             </select>
           </div>
 
-          {anyLoading && selectedParcels.length === 0 ? (
+          {loading && selectedParcels.length === 0 ? (
             <div className="status-message"><span className="spinner" /> Sprawdzam działkę…</div>
-          ) : anyCandidates && selectedParcels.length === 0 ? (
+          ) : candidates.length > 0 && selectedParcels.length === 0 ? (
             <div className="empty-state"><p>Wybierz działkę z listy powyżej, aby wyświetlić jej granice na mapie.</p></div>
           ) : parcel ? (
             <>
-              {anyLoading && (
+              {loading && (
                 <div className="status-message status-message-compact"><span className="spinner" /> Wczytuję kolejną działkę…</div>
               )}
-              {isMultiSelected && (
-                <span className="active-parcel-kicker">PODGLĄD DZIAŁKI Z ZESTAWU</span>
-              )}
-              <p className="parcel-number">{parcel.parcel}</p>
-              <dl className="parcel-data">
-                <div><dt>Identyfikator</dt><dd>{parcel.id}</dd></div>
+              <div className="parcel-summary-header">
+                <div>
+                  {isMultiSelected && <span className="active-parcel-kicker">PODGLĄD DZIAŁKI</span>}
+                  <p className="parcel-number">{parcel.parcel}</p>
+                </div>
+                <div className="selected-badge selected-badge-inline">
+                  <span />
+                  {isMultiSelected ? polishParcelsCount(selectedParcels.length) : "Na mapie"}
+                </div>
+              </div>
+              <dl className="parcel-data parcel-data-compact">
+                <div className="parcel-data-wide"><dt>Identyfikator</dt><dd>{parcel.id}</dd></div>
                 <div><dt>Gmina</dt><dd>{parcel.commune || "Brak danych"}</dd></div>
                 <div><dt>Powiat</dt><dd>{parcel.county || "Brak danych"}</dd></div>
                 <div><dt>Województwo</dt><dd>{parcel.voivodeship || "Brak danych"}</dd></div>
                 {parcel.lat != null && parcel.lng != null && (
-                  <div><dt>Lokalizacja</dt><dd>{parcel.lat.toFixed(6)}, {parcel.lng.toFixed(6)}<small className="coordinate-label"> lat, lon</small></dd></div>
+                  <div><dt>Współrzędne</dt><dd>{parcel.lat.toFixed(4)}, {parcel.lng.toFixed(4)}</dd></div>
                 )}
               </dl>
-
-              <div className="selected-badge">
-                <span />
-                {isMultiSelected
-                  ? `Zaznaczono na mapie: ${polishParcelsCount(selectedParcels.length)}`
-                  : "Działka zaznaczona na mapie"}
-              </div>
               <a className="report-button" href={reportUrl(selectedParcels, crop)} target="_blank" rel="noopener">
                 {isMultiSelected
                   ? `Otwórz wspólny raport zbiorczy (${polishParcelsCount(selectedParcels.length)})`
@@ -1587,40 +1478,42 @@ export default function Home() {
               </a>
               <p className="report-button-help">
                 {isMultiSelected
-                  ? `W nowej karcie: wspólne podsumowanie dla ${selectedParcels.length} działek oraz szczegółowe karty każdej z nich.`
-                  : "W nowej karcie: pogoda, hydrologia i wskaźniki Sentinel-2 (NDVI) dla wybranej uprawy."}
+                  ? `W nowej karcie: raport łączony oraz karty dla wszystkich ${selectedParcels.length} działek.`
+                  : "W nowej karcie: pogoda, hydrologia i wskaźniki Sentinel-2 (NDVI)."}
               </p>
             </>
           ) : (
             <>
               {error && <div className="error-message" role="alert"><strong>{outsidePoland ? "Punkt poza granicami Polski" : "Nie udało się wybrać działki"}</strong><p>{error}</p></div>}
-              <section className="guide-card" aria-label="Jak przygotować raport">
-                <div>
-                  <h3>Jak to działa</h3>
-                  <ol className="guide-steps">
-                    <li>
-                      <GuideIcon><path d="M12 21c0-6 4-9 9-10-1 7-5 10-9 10z" /><path d="M12 21C12 14 7 9 3 8c1 7 5 11 9 13z" /></GuideIcon>
-                      <span>Wybierz uprawę z listy powyżej.</span>
-                    </li>
-                    <li>
-                      <GuideIcon><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" /><circle cx="12" cy="10" r="2.2" /></GuideIcon>
-                      <span>Kliknij działkę na mapie, wpisz nr działki lub dodaj kilka działek naraz.</span>
-                    </li>
-                    <li>
-                      <GuideIcon><path d="M7 3.5h7.2L19 8.2V20a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 6 20V5A1.5 1.5 0 0 1 7.5 3.5z" /><path d="M14 3.5V8h4.5M8.5 13h7M8.5 17h4.5" /></GuideIcon>
-                      <span>Odbierz raport retencyjny i zalecenia melioracyjne.</span>
-                    </li>
-                  </ol>
-                </div>
-                <div>
-                  <h3>Co zawiera raport</h3>
-                  <ul className="guide-badges">
-                    <li><i className="guide-dot" aria-hidden="true" />Bilans opadów i parowania</li>
-                    <li><i className="guide-dot guide-dot-soil" aria-hidden="true" />Wilgotność gleby</li>
-                    <li><i className="guide-dot guide-dot-water" aria-hidden="true" />Wodowskazy i przepływy</li>
-                  </ul>
-                </div>
-              </section>
+              {candidates.length === 0 && (
+                <section className="guide-card" aria-label="Jak przygotować raport">
+                  <div>
+                    <h3>Jak to działa</h3>
+                    <ol className="guide-steps">
+                      <li>
+                        <GuideIcon><path d="M12 21c0-6 4-9 9-10-1 7-5 10-9 10z" /><path d="M12 21C12 14 7 9 3 8c1 7 5 11 9 13z" /></GuideIcon>
+                        <span>Wybierz uprawę z listy powyżej.</span>
+                      </li>
+                      <li>
+                        <GuideIcon><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" /><circle cx="12" cy="10" r="2.2" /></GuideIcon>
+                        <span>Kliknij działkę na mapie, wpisz numer lub dodaj kilka działek.</span>
+                      </li>
+                      <li>
+                        <GuideIcon><path d="M7 3.5h7.2L19 8.2V20a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 6 20V5A1.5 1.5 0 0 1 7.5 3.5z" /><path d="M14 3.5V8h4.5M8.5 13h7M8.5 17h4.5" /></GuideIcon>
+                        <span>Odbierz raport retencyjny i zalecenia.</span>
+                      </li>
+                    </ol>
+                  </div>
+                  <div>
+                    <h3>Co zawiera raport</h3>
+                    <ul className="guide-badges">
+                      <li><i className="guide-dot" aria-hidden="true" />Bilans opadów</li>
+                      <li><i className="guide-dot guide-dot-soil" aria-hidden="true" />Wilgotność gleby</li>
+                      <li><i className="guide-dot guide-dot-water" aria-hidden="true" />Wodowskazy</li>
+                    </ul>
+                  </div>
+                </section>
+              )}
             </>
           )}
         </aside>

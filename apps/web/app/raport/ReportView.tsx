@@ -241,6 +241,43 @@ type EvaluatedParcel = {
   label: string;
 };
 
+type ReportNavItem = {
+  id: string;
+  label: string;
+  switchToDetailed?: boolean;
+};
+
+function ReportSectionNav({
+  items,
+  activeSectionId,
+  onJump,
+}: {
+  items: ReportNavItem[];
+  activeSectionId: string;
+  onJump: (item: ReportNavItem) => void;
+}) {
+  return (
+    <nav className="report-quick-nav" aria-label="Nawigacja po sekcjach raportu">
+      <span className="report-quick-nav-label">Przejdź do:</span>
+      <div className="report-quick-nav-list">
+        {items.map((item) => {
+          const isActive = !item.switchToDetailed && activeSectionId === item.id;
+          return (
+            <button
+              key={`${item.id}-${item.switchToDetailed ? "switch" : "jump"}`}
+              type="button"
+              className={`report-quick-nav-btn${isActive ? " active" : ""}${item.switchToDetailed ? " highlight-action" : ""}`}
+              onClick={() => onJump(item)}
+            >
+              {item.label}
+            </button>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
 export default function ReportView({
   parcelId = "",
   parcelIds,
@@ -285,6 +322,7 @@ export default function ReportView({
   // W raporcie dla wielu działek przełącznik u góry wybiera "combined" (raport łączony) albo konkretne ID działki
   const [activeReportTab, setActiveReportTab] = useState<string>("combined");
   const [focusedMapParcelId, setFocusedMapParcelId] = useState<string | null>(null);
+  const [activeSectionId, setActiveSectionId] = useState<string>("sekcja-ocena");
 
   useEffect(() => {
     setGeneratedAt(new Date());
@@ -292,18 +330,36 @@ export default function ReportView({
 
   function changeMode(next: ReportMode) {
     setMode(next);
+    setActiveSectionId("sekcja-ocena");
     window.scrollTo({ top: 0 });
   }
 
   function selectReportTab(tabId: string) {
     setActiveReportTab(tabId);
+    setActiveSectionId("sekcja-ocena");
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function jumpToSection(item: ReportNavItem) {
+    if (item.switchToDetailed) {
+      setMode("detailed");
+      setActiveSectionId(item.id);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      });
+      return;
+    }
+    setActiveSectionId(item.id);
+    document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   useEffect(() => {
     setActiveReportTab("combined");
     setMode("simple");
     setFocusedMapParcelId(null);
+    setActiveSectionId("sekcja-ocena");
 
     if (effectiveIds.length === 0) {
       setEntriesById({});
@@ -776,6 +832,54 @@ export default function ReportView({
     return Array.from(items);
   }, [evaluatedParcels, isMulti]);
 
+  const selectedParcelIndex = isMulti ? evaluatedParcels.findIndex((item) => item.requestedId === activeReportTab) : -1;
+  const selectedEvaluatedParcel = isMulti && selectedParcelIndex >= 0 ? evaluatedParcels[selectedParcelIndex] : null;
+  const isShowingCombinedView = isMulti && selectedEvaluatedParcel === null;
+
+  const navItems = useMemo<ReportNavItem[]>(() => {
+    const items: ReportNavItem[] = [
+      { id: "sekcja-ocena", label: "Ocena i mapa" },
+    ];
+    if (isShowingCombinedView) {
+      items.push({ id: "sekcja-porownanie", label: "Porównanie działek" });
+    }
+    items.push({ id: "sekcja-ostrzezenia", label: "Ostrzeżenia IMGW" });
+    items.push({ id: "sekcja-rekomendacje", label: "Rekomendacje" });
+
+    if (!detailed) {
+      items.push({ id: "sekcja-analiza", label: "Przejdź do analizy →", switchToDetailed: true });
+    } else if (isShowingCombinedView) {
+      items.push({ id: "sekcja-analiza", label: "Analiza i wnioski" });
+      items.push({ id: "sekcja-ograniczenia", label: "Ograniczenia" });
+    } else {
+      items.push({ id: "sekcja-analiza", label: "Analiza i wnioski" });
+      items.push({ id: "sekcja-meteo", label: "Meteorologia" });
+      items.push({ id: "sekcja-hydro", label: "Hydrologia i gleba" });
+      items.push({ id: "sekcja-satelita", label: "Satelita (NDVI)" });
+      items.push({ id: "sekcja-ograniczenia", label: "Ograniczenia" });
+    }
+    return items;
+  }, [isShowingCombinedView, detailed]);
+
+  useEffect(() => {
+    const anchorIds = navItems.filter((item) => !item.switchToDetailed).map((item) => item.id);
+    function handleScroll() {
+      let current = anchorIds[0] ?? "sekcja-ocena";
+      for (const id of anchorIds) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        if (rect.top <= 140) {
+          current = id;
+        }
+      }
+      setActiveSectionId((prev) => (prev === current ? prev : current));
+    }
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [navItems]);
+
   // === SINGLE PARCEL REPORT ===
   if (!isMulti) {
     const singleItem = evaluatedParcels[0];
@@ -830,15 +934,19 @@ export default function ReportView({
           <div className="error-message report-block" role="alert"><strong>Problem z danymi działki</strong><p>{parcelState.message}</p></div>
         )}
 
-        <div className="report-mode" role="radiogroup" aria-label="Widok raportu">
-          <span className="report-mode-label">Widok raportu:</span>
-          <button type="button" role="radio" aria-checked={!detailed} className={!detailed ? "active" : ""} onClick={() => changeMode("simple")}>
-            Prosty
-          </button>
-          <button type="button" role="radio" aria-checked={detailed} className={detailed ? "active" : ""} onClick={() => changeMode("detailed")}>
-            Szczegółowy
-          </button>
+        <div className="report-top-controls">
+          <div className="report-mode" role="radiogroup" aria-label="Widok raportu">
+            <span className="report-mode-label">Widok raportu:</span>
+            <button type="button" role="radio" aria-checked={!detailed} className={!detailed ? "active" : ""} onClick={() => changeMode("simple")}>
+              Prosty
+            </button>
+            <button type="button" role="radio" aria-checked={detailed} className={detailed ? "active" : ""} onClick={() => changeMode("detailed")}>
+              Szczegółowy
+            </button>
+          </div>
         </div>
+
+        <ReportSectionNav items={navItems} activeSectionId={activeSectionId} onJump={jumpToSection} />
 
         <SingleParcelReportContent
           parcelData={parcelData}
@@ -869,8 +977,6 @@ export default function ReportView({
     new Set(readyParcels.map((item) => [item.commune, item.county].filter(Boolean).join(" (") + (item.county && item.commune ? ")" : "")).filter(Boolean)),
   ).join(" · ");
 
-  const selectedParcelIndex = evaluatedParcels.findIndex((item) => item.requestedId === activeReportTab);
-  const selectedEvaluatedParcel = selectedParcelIndex >= 0 ? evaluatedParcels[selectedParcelIndex] : null;
   const isShowingCombined = selectedEvaluatedParcel === null;
 
   return (
@@ -957,8 +1063,8 @@ export default function ReportView({
               >
                 {statusLevel && <i className={`tab-status-dot dot-${statusLevel}`} aria-hidden="true" />}
                 <span>Działka {item.label}</span>
-                {item.parcelData?.commune && <small className="tab-commune"> · {item.parcelData.commune}</small>}
-                {!item.parcelData?.commune && <small className="tab-commune"> #{idx + 1}</small>}
+                {item.parcelData?.commune && <span className="tab-commune"> · {item.parcelData.commune}</span>}
+                {!item.parcelData?.commune && <span className="tab-commune"> #{idx + 1}</span>}
               </button>
             );
           })}
@@ -975,9 +1081,11 @@ export default function ReportView({
         </div>
       </div>
 
+      <ReportSectionNav items={navItems} activeSectionId={activeSectionId} onJump={jumpToSection} />
+
       {isShowingCombined ? (
         <>
-          <section className="report-top" aria-label="Podsumowanie całego zestawu działek">
+          <section id="sekcja-ocena" className="report-top report-anchor-section" aria-label="Podsumowanie całego zestawu działek">
             <div className="report-card report-verdict-card">
               {aggregateOverview ? (
                 <>
@@ -1019,7 +1127,7 @@ export default function ReportView({
             </div>
           </section>
 
-          <section className="report-card report-block" aria-label="Zestawienie porównawcze wybranych działek">
+          <section id="sekcja-porownanie" className="report-card report-block report-anchor-section" aria-label="Zestawienie porównawcze wybranych działek">
             <div className="report-section-heading">
               <div>
                 <span className="weather-kicker">PORÓWNANIE W ZESTAWIE · KLIKNIJ DZIAŁKĘ, ABY OTWORZYĆ JEJ WIDOK</span>
@@ -1097,17 +1205,19 @@ export default function ReportView({
 
           <ImgwWarningsSection imgwWarnings={combinedImgwWarnings} isMulti />
 
-          {aggregateOverview && aggregateOverview.combinedAdvice.length > 0 && (
-            <section className="report-card report-block">
-              <div className="report-section-heading">
-                <div>
-                  <span className="weather-kicker">WSPÓLNY PLAN DZIAŁAŃ · CAŁY ZESTAW</span>
-                  <h2 className="report-title">Priorytetowe rekomendacje dla wybranych działek</h2>
-                </div>
+          <section id="sekcja-rekomendacje" className="report-card report-block report-anchor-section">
+            <div className="report-section-heading">
+              <div>
+                <span className="weather-kicker">WSPÓLNY PLAN DZIAŁAŃ · CAŁY ZESTAW</span>
+                <h2 className="report-title">Priorytetowe rekomendacje dla wybranych działek</h2>
+              </div>
+              {aggregateOverview && (
                 <span className="weather-source">
                   {aggregateOverview.combinedAdvice.length} {aggregateOverview.combinedAdvice.length === 1 ? "porada" : aggregateOverview.combinedAdvice.length < 5 ? "porady" : "porad"}
                 </span>
-              </div>
+              )}
+            </div>
+            {aggregateOverview && aggregateOverview.combinedAdvice.length > 0 ? (
               <AdviceCardsList
                 items={aggregateOverview.combinedAdvice.map((entry) => ({
                   advice: entry.advice,
@@ -1116,8 +1226,12 @@ export default function ReportView({
                     : `Dotyczy: dz. ${entry.parcelLabels.join(", ")}`,
                 }))}
               />
-            </section>
-          )}
+            ) : evaluatedParcels.some((p) => p.dataLoading) ? (
+              <div className="status-message"><span className="spinner" /> Generuję rekomendacje dopasowane do wybranych działek…</div>
+            ) : (
+              <p className="report-note">Brak wystarczających danych pomiarowych do wygenerowania rekomendacji.</p>
+            )}
+          </section>
 
           {!detailed ? (
             <section className="report-card report-block simple-more">
@@ -1129,7 +1243,7 @@ export default function ReportView({
             </section>
           ) : (
             <>
-              <section className="report-card report-block">
+              <section id="sekcja-analiza" className="report-card report-block report-anchor-section">
                 <div className="report-section-heading">
                   <div>
                     <span className="weather-kicker">WNIOSKI SZCZEGÓŁOWE · ZESTAWIENIE DZIAŁEK</span>
@@ -1171,7 +1285,7 @@ export default function ReportView({
                 </div>
               </section>
 
-              <section className="report-card report-block report-limitations">
+              <section id="sekcja-ograniczenia" className="report-card report-block report-limitations report-anchor-section">
                 <h2 className="report-title">Ograniczenia raportu</h2>
                 <ul>
                   {combinedLimitations.map((item) => <li key={item}>{item}</li>)}
@@ -1253,7 +1367,7 @@ function SingleParcelReportContent({
 }) {
   return (
     <>
-      <section className="report-top">
+      <section id="sekcja-ocena" className="report-top report-anchor-section">
         <div className="report-card report-verdict-card">
           {summary ? (
             <>
@@ -1290,18 +1404,24 @@ function SingleParcelReportContent({
 
       <ImgwWarningsSection imgwWarnings={imgwWarnings} isMulti={false} />
 
-      {summary && (
-        <section className="report-card report-block">
-          <div className="report-section-heading">
-            <div>
-              <span className="weather-kicker">PLAN DZIAŁAŃ · DOBRANY DO TWOJEJ DZIAŁKI</span>
-              <h2 className="report-title">Rekomendacje – jak zatrzymać wodę</h2>
-            </div>
-            <span className="weather-source">{advice.length} {advice.length === 1 ? "porada" : advice.length < 5 ? "porady" : "porad"}</span>
+      <section id="sekcja-rekomendacje" className="report-card report-block report-anchor-section">
+        <div className="report-section-heading">
+          <div>
+            <span className="weather-kicker">PLAN DZIAŁAŃ · DOBRANY DO TWOJEJ DZIAŁKI</span>
+            <h2 className="report-title">Rekomendacje – jak zatrzymać wodę</h2>
           </div>
+          {summary && (
+            <span className="weather-source">{advice.length} {advice.length === 1 ? "porada" : advice.length < 5 ? "porady" : "porad"}</span>
+          )}
+        </div>
+        {summary ? (
           <AdviceCardsList items={advice.map((item) => ({ advice: item }))} />
-        </section>
-      )}
+        ) : dataLoading ? (
+          <div className="status-message"><span className="spinner" /> Generuję rekomendacje dopasowane do pomiarów na działce…</div>
+        ) : (
+          <p className="report-note">Brak wystarczających danych pomiarowych do wygenerowania rekomendacji.</p>
+        )}
+      </section>
 
       {!detailed && (
         <section className="report-card report-block simple-more">
@@ -1317,6 +1437,7 @@ function SingleParcelReportContent({
         <>
           <ParcelDetailedBlocks
             summary={summary}
+            dataLoading={dataLoading}
             weather={weather}
             weatherData={weatherData}
             hydro={hydro}
@@ -1325,7 +1446,7 @@ function SingleParcelReportContent({
             satelliteData={satelliteData}
             cropName={cropName}
           />
-          <section className="report-card report-block report-limitations">
+          <section id="sekcja-ograniczenia" className="report-card report-block report-limitations report-anchor-section">
             <h2 className="report-title">Ograniczenia raportu</h2>
             <ul>
               {limitations.map((item) => <li key={item}>{item}</li>)}
@@ -1346,7 +1467,7 @@ function ImgwWarningsSection({
   isMulti: boolean;
 }) {
   return (
-    <section className="report-card report-block imgw-warning-card" aria-live="polite" aria-label="Ostrzeżenia IMGW">
+    <section id="sekcja-ostrzezenia" className="report-card report-block imgw-warning-card report-anchor-section" aria-live="polite" aria-label="Ostrzeżenia IMGW">
       <div className="report-section-heading">
         <div>
           <span className="weather-kicker">IMGW-PIB · AKTUALNE KOMUNIKATY</span>
@@ -1413,6 +1534,7 @@ function AdviceCardsList({ items }: { items: Array<{ advice: Advice; scopeLabel?
 
 function ParcelDetailedBlocks({
   summary,
+  dataLoading,
   weather,
   weatherData,
   hydro,
@@ -1423,6 +1545,7 @@ function ParcelDetailedBlocks({
   parcelBadge,
 }: {
   summary: ReportSummary | null;
+  dataLoading: boolean;
   weather: LoadState<WeatherResult>;
   weatherData: WeatherResult | null;
   hydro: LoadState<HydroResult>;
@@ -1434,9 +1557,14 @@ function ParcelDetailedBlocks({
 }) {
   return (
     <>
-      {summary && (
-        <section className="report-card report-block">
-          <h2 className="report-title">Najważniejsze wnioski z danych{parcelBadge ? ` (${parcelBadge})` : ""}</h2>
+      <section id="sekcja-analiza" className="report-card report-block report-anchor-section">
+        <div className="report-section-heading">
+          <div>
+            <span className="weather-kicker">WNIOSKI Z ANALIZY POMIARÓW{parcelBadge ? ` · ${parcelBadge}` : ""}</span>
+            <h2 className="report-title">Najważniejsze wnioski z danych{parcelBadge ? ` (${parcelBadge})` : ""}</h2>
+          </div>
+        </div>
+        {summary ? (
           <ul className="finding-list finding-grid">
             {summary.findings.map((finding) => (
               <li key={finding.title} className={`finding level-${finding.level}`}>
@@ -1445,10 +1573,14 @@ function ParcelDetailedBlocks({
               </li>
             ))}
           </ul>
-        </section>
-      )}
+        ) : dataLoading ? (
+          <div className="status-message"><span className="spinner" /> Analizuję pomiary meteorologiczne i hydrologiczne dla działki…</div>
+        ) : (
+          <p className="report-note">Brak wystarczających danych pomiarowych do wygenerowania wniosków.</p>
+        )}
+      </section>
 
-      <section className="report-card report-block">
+      <section id="sekcja-meteo" className="report-card report-block report-anchor-section">
         <div className="report-section-heading">
           <div>
             <span className="weather-kicker">METEOROLOGIA · OSTATNIE 30 DNI{parcelBadge ? ` · ${parcelBadge}` : ""}</span>
@@ -1474,7 +1606,7 @@ function ParcelDetailedBlocks({
         )}
       </section>
 
-      <section className="report-card report-block">
+      <section id="sekcja-hydro" className="report-card report-block report-anchor-section">
         <div className="report-section-heading">
           <div>
 
@@ -1547,7 +1679,7 @@ function ParcelDetailedBlocks({
         )}
       </section>
 
-      <section className="report-card report-block">
+      <section id="sekcja-satelita" className="report-card report-block report-anchor-section">
         <div className="report-section-heading">
           <div>
             <span className="weather-kicker">SENTINEL-2 · NDVI · {cropName.toUpperCase()}{parcelBadge ? ` · ${parcelBadge}` : ""}</span>
