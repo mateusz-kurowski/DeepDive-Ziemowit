@@ -472,6 +472,7 @@ html[data-contrast="high"] .report-brand { text-decoration: none; }
 .report-header { margin-bottom: 22px; }
 .report-card { padding: 20px 22px; border: var(--border-width) solid var(--line); border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); }
 .report-block { margin-top: 18px; }
+.report-shell .terrain-card, .report-shell .drought-card { width: 100%; margin: 18px 0 0; }
 .imgw-warning-card { background: var(--surface-2); }
 .imgw-warning-card .report-title { margin-bottom: 4px; }
 .imgw-warning-group + .imgw-warning-group { margin-top: 12px; }

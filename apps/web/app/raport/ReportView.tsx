@@ -9,6 +9,9 @@ import type {
   ImgwWarningsResult,
   ParcelResult,
   SatelliteResult,
+  SoilTextureResult,
+  TerrainFlowResult,
+  DroughtResult,
   WeatherResult,
 } from "../types";
 import BrandLogo from "../components/BrandLogo";
@@ -42,6 +45,9 @@ type ParcelEntryState = {
   hydro: LoadState<HydroResult>;
   imgw: LoadState<ImgwWarningsResult>;
   satellite: LoadState<SatelliteResult>;
+  soilTexture: LoadState<SoilTextureResult>;
+  terrainFlow: LoadState<TerrainFlowResult>;
+  drought: LoadState<DroughtResult>;
 };
 
 async function postJson<T>(
@@ -322,6 +328,9 @@ export default function ReportView({
         hydro: { status: "loading" },
         imgw: { status: "loading" },
         satellite: { status: "loading" },
+        soilTexture: { status: "loading" },
+        terrainFlow: { status: "loading" },
+        drought: { status: "loading" },
       };
     });
     setEntriesById(initialEntries);
@@ -371,6 +380,9 @@ export default function ReportView({
               hydro: { status: "error", message: "Brak lokalizacji działki." },
               imgw: { status: "error", message },
               satellite: { status: "error", message: "Brak lokalizacji działki." },
+              soilTexture: { status: "error", message: "Brak lokalizacji działki." },
+              terrainFlow: { status: "error", message: "Brak lokalizacji działki." },
+              drought: { status: "error", message: "Brak lokalizacji działki." },
             });
             setCombinedImgwWarnings({ status: "error", message });
             return;
@@ -409,6 +421,9 @@ export default function ReportView({
                   hydro: { status: "error", message: "Brak lokalizacji działki." },
                   imgw: { status: "error", message: errMsg },
                   satellite: { status: "error", message: "Brak lokalizacji działki." },
+                soilTexture: { status: "error", message: "Brak lokalizacji działki." },
+                terrainFlow: { status: "error", message: "Brak lokalizacji działki." },
+                drought: { status: "error", message: "Brak lokalizacji działki." },
                 });
               }
             }
@@ -500,6 +515,9 @@ export default function ReportView({
             weather: { status: "error", message: "Brak współrzędnych działki." },
             hydro: { status: "error", message: "Brak współrzędnych działki." },
             satellite: { status: "error", message: "Brak współrzędnych działki." },
+            soilTexture: { status: "error", message: "Brak współrzędnych działki." },
+            terrainFlow: { status: "error", message: "Brak współrzędnych działki." },
+            drought: { status: "error", message: "Brak współrzędnych działki." },
           });
           await imgwPromise;
           return;
@@ -510,14 +528,33 @@ export default function ReportView({
           .then((data) => patchEntry(reqId, { hydro: { status: "ready", data } }))
           .catch((reason) => patchEntry(reqId, { hydro: { status: "error", message: errorMessage(reason, "Dane hydrologiczne niedostępne.") } }));
 
+        const soilTexturePromise = postJson<SoilTextureResult>("/api/soil-texture", { lat, lng }, controller.signal)
+          .then((data) => patchEntry(reqId, { soilTexture: { status: "ready", data } }))
+          .catch((reason) => patchEntry(reqId, { soilTexture: { status: "error", message: errorMessage(reason, "Dane o uziarnieniu gleby niedostępne.") } }));
+        const terrainFlowPromise = selected.geometry
+          ? postJson<TerrainFlowResult>("/api/terrain-flow", { id: selected.id, lat, lng, geometry: selected.geometry }, controller.signal)
+              .then((data) => patchEntry(reqId, { terrainFlow: { status: "ready", data } }))
+              .catch((reason) => patchEntry(reqId, { terrainFlow: { status: "error", message: errorMessage(reason, "Analiza rzeźby terenu niedostępna.") } }))
+          : Promise.resolve(patchEntry(reqId, { terrainFlow: { status: "error", message: "Brak geometrii działki do analizy spływu." } }));
         const weatherAndSatPromise = (async () => {
           let weatherAvailable = false;
+          let precipitation30DaysMm: number | null = null;
           try {
             const data = await postJson<WeatherResult>("/api/weather", { latitude: lat, longitude: lng, date: todayIso() }, controller.signal);
             weatherAvailable = true;
+            precipitation30DaysMm = data.indicators.precipitationSumMm;
             patchEntry(reqId, { weather: { status: "ready", data } });
           } catch (reason) {
             patchEntry(reqId, { weather: { status: "error", message: errorMessage(reason, "Dane meteorologiczne niedostępne.") } });
+          }
+          if (controller.signal.aborted) return;
+          try {
+            const droughtData = await postJson<DroughtResult>("/api/drought", {
+              lat, lng, crop, geometry: selected.geometry, precipitation30DaysMm,
+            }, controller.signal);
+            patchEntry(reqId, { drought: { status: "ready", data: droughtData } });
+          } catch (reason) {
+            patchEntry(reqId, { drought: { status: "error", message: errorMessage(reason, "Dane o podatności na suszę niedostępne.") } });
           }
           if (controller.signal.aborted) return;
           try {
@@ -540,7 +577,7 @@ export default function ReportView({
           }
         })();
 
-        await Promise.all([imgwPromise, hydroPromise, weatherAndSatPromise]);
+        await Promise.all([imgwPromise, hydroPromise, weatherAndSatPromise, soilTexturePromise, terrainFlowPromise]);
       });
 
 
@@ -566,6 +603,9 @@ export default function ReportView({
         hydro: { status: "loading" },
         imgw: { status: "loading" },
         satellite: { status: "loading" },
+        soilTexture: { status: "loading" },
+        terrainFlow: { status: "loading" },
+        drought: { status: "loading" },
       };
       const parcelData = entry.parcel.status === "ready" ? entry.parcel.data : null;
       const weatherData = entry.weather.status === "ready" ? entry.weather.data : null;
@@ -854,6 +894,10 @@ export default function ReportView({
           hydroData={hydroData}
           satellite={satelliteState}
           satelliteData={satelliteData}
+        soilTexture={singleItem?.entry.soilTexture ?? { status: "loading" }}
+        terrainFlow={singleItem?.entry.terrainFlow ?? { status: "loading" }}
+        drought={singleItem?.entry.drought ?? { status: "loading" }}
+        parcelBadge={undefined}
           limitations={singleItem?.limitations ?? []}
           cropName={cropName}
           onShowDetailed={() => changeMode("detailed")}
@@ -1204,6 +1248,10 @@ export default function ReportView({
             hydroData={selectedEvaluatedParcel.hydroData}
             satellite={selectedEvaluatedParcel.entry.satellite}
             satelliteData={selectedEvaluatedParcel.satelliteData}
+            soilTexture={selectedEvaluatedParcel.entry.soilTexture}
+            terrainFlow={selectedEvaluatedParcel.entry.terrainFlow}
+            drought={selectedEvaluatedParcel.entry.drought}
+            parcelBadge={`DZ. ${selectedEvaluatedParcel.parcelData?.parcel ?? selectedEvaluatedParcel.requestedId}`}
             limitations={selectedEvaluatedParcel.limitations}
             cropName={cropName}
             onShowDetailed={() => changeMode("detailed")}
@@ -1230,6 +1278,10 @@ function SingleParcelReportContent({
   hydroData,
   satellite,
   satelliteData,
+  soilTexture,
+  terrainFlow,
+  drought,
+  parcelBadge,
   limitations,
   cropName,
   onShowDetailed,
@@ -1247,6 +1299,10 @@ function SingleParcelReportContent({
   hydroData: HydroResult | null;
   satellite: LoadState<SatelliteResult>;
   satelliteData: SatelliteResult | null;
+  soilTexture: LoadState<SoilTextureResult>;
+  terrainFlow: LoadState<TerrainFlowResult>;
+  drought: LoadState<DroughtResult>;
+  parcelBadge?: string;
   limitations: string[];
   cropName: string;
   onShowDetailed: () => void;
@@ -1323,6 +1379,10 @@ function SingleParcelReportContent({
             hydroData={hydroData}
             satellite={satellite}
             satelliteData={satelliteData}
+            soilTexture={soilTexture}
+            terrainFlow={terrainFlow}
+            drought={drought}
+            parcelBadge={parcelBadge}
             cropName={cropName}
           />
           <section className="report-card report-block report-limitations">
@@ -1411,6 +1471,87 @@ function AdviceCardsList({ items }: { items: Array<{ advice: Advice; scopeLabel?
   );
 }
 
+function DetailedLandAnalysis({
+  soilTexture,
+  terrainFlow,
+  drought,
+  parcelBadge,
+}: {
+  soilTexture: LoadState<SoilTextureResult>;
+  terrainFlow: LoadState<TerrainFlowResult>;
+  drought: LoadState<DroughtResult>;
+  parcelBadge?: string;
+}) {
+  const soil = soilTexture.status === "ready" ? soilTexture.data : null;
+  const terrain = terrainFlow.status === "ready" ? terrainFlow.data : null;
+  const droughtData = drought.status === "ready" ? drought.data : null;
+  return (
+    <>
+      <section className="terrain-card" aria-label="Dane o terenie i glebie">
+        <div className="terrain-card-heading"><div><span className="terrain-kicker">CHARAKTERYSTYKA DZIAŁKI{parcelBadge ? ` · ${parcelBadge}` : ""}</span><h2>Teren i gleba</h2></div>
+          {soil && <span className="terrain-source">SoilGrids · {soil.source.resolutionM} m</span>}
+        </div>
+        <p className="terrain-description">Uziarnienie wierzchniej warstwy gleby (0–5 cm){parcelBadge ? ` dla ${parcelBadge.toLowerCase()}` : " dla wybranej działki"}.</p>
+        {soilTexture.status === "loading" ? <div className="weather-status"><span className="spinner" /> Pobieram dane o glebie z SoilGrids…</div>
+          : soilTexture.status === "error" ? <div className="weather-error" role="alert">{soilTexture.message}</div>
+          : soil?.status === "unresolved-zero" ? <div className="soil-unavailable" role="status">Źródło zwróciło same zera bez znacznika braku danych. Nie pokazujemy ich jako składu gleby.</div>
+          : soil ? <>
+            <div className="soil-fractions" aria-label="Udziały frakcji gleby">
+              {(["sand", "silt", "clay"] as const).map((key) => { const fraction = soil.fractions[key]; const percent = fraction.valueGkg === null ? null : fraction.valueGkg / 10;
+                return <div className="soil-fraction" key={key}><div className="soil-fraction-heading"><span>{fraction.label}</span><strong>{percent === null ? "—" : `${percent.toFixed(1)}%`}</strong></div><div className="soil-bar"><span className={`soil-bar-fill soil-${key}`} style={{ width: `${Math.max(0, Math.min(percent ?? 0, 100))}%` }} /></div><small>{fraction.valueGkg === null ? "brak danych" : `${fraction.valueGkg} g/kg`}</small></div>;
+              })}
+            </div>
+            {soil.status === "partial" && <p className="soil-unavailable">Część frakcji nie ma wartości w źródle.</p>}
+          </> : null}
+        <p className="terrain-note">Źródło: <a href={soil?.source.url ?? "https://docs.isric.org/globaldata/soilgrids/"} target="_blank" rel="noreferrer">ISRIC SoilGrids</a>, predykcja modelu o rozdzielczości 250 m; wartości pobrane dla punktu reprezentatywnego działki, nie uśrednione po jej granicach. Frakcje podano oddzielnie, bez normalizowania sumy.</p>
+
+        <section className="terrain-flow-section" aria-label="Ukształtowanie terenu i potencjalny spływ wody">
+          <div className="terrain-flow-heading"><div><span className="terrain-kicker">NMT GUGiK · SPŁYW POWIERZCHNIOWY</span><h3>Ukształtowanie i spływ wody</h3></div>
+            {terrain && <span className="terrain-source">siatka co {terrain.sampleSpacingM} m</span>}
+          </div>
+          {terrainFlow.status === "loading" ? <div className="weather-status"><span className="spinner" /> Analizuję wysokości i drogi spływu…</div>
+            : terrainFlow.status === "error" ? <div className="weather-error" role="alert">{terrainFlow.message}</div>
+            : terrain ? <>
+              <div className="terrain-flow-summary"><div><small>Średnie nachylenie</small><strong>{terrain.slope.meanDeg === null ? "—" : `${terrain.slope.meanDeg}°`}</strong></div><div><small>Nachylenie — 90. percentyl</small><strong>{terrain.slope.p90Deg === null ? "—" : `${terrain.slope.p90Deg}°`}</strong></div><div><small>Próbkowane komórki</small><strong>{terrain.validSampleCount}</strong></div></div>
+              {terrain.status === "partial" && <p className="soil-unavailable">Część punktów poza zasięgiem usługi NMT nie weszła do analizy.</p>}
+              <div className="terrain-flow-groups">
+                <div><strong>Potencjalny dopływ z otoczenia</strong>{terrain.flow.inflowExits.length ? <ul>{terrain.flow.inflowExits.map((item) => <li key={item.direction}><span>Kierunek {item.direction}</span><span>zasilany obszar ≈ {item.estimatedContributingAreaM2.toLocaleString("pl-PL")} m²</span></li>)}</ul> : <p>Model nie wykrył drogi dopływu przecinającej granicę działki.</p>}</div>
+                <div><strong>Potencjalny odpływ poza działkę</strong>{terrain.flow.outflowExits.length ? <ul>{terrain.flow.outflowExits.map((item) => <li key={item.direction}><span>Kierunek {item.direction}</span><span>zasilany obszar ≈ {item.estimatedContributingAreaM2.toLocaleString("pl-PL")} m²</span></li>)}</ul> : <p>Model nie wykrył drogi spływu przecinającej granicę działki.</p>}</div>
+                <div><strong>Możliwe miejsca gromadzenia</strong>{terrain.flow.depressions.length ? <ul>{terrain.flow.depressions.map((item, index) => <li key={`${item.lat}-${item.lng}`}><span>Obniżenie {index + 1}</span><span>{item.areaM2.toLocaleString("pl-PL")} m² · głębokość do {item.maxFillDepthM.toFixed(2)} m</span></li>)}</ul> : <p>Nie wykryto zamkniętych obniżeń przekraczających próg analizy.</p>}</div>
+              </div>
+              {terrain.flow.concentrationZones.length > 0 && <p className="terrain-flow-note">Możliwe korytarze koncentracji spływu: {terrain.flow.concentrationZones.map((item) => `około ${item.estimatedContributingAreaM2.toLocaleString("pl-PL")} m² zasilania`).join("; ")}.</p>}
+              <details className="terrain-flow-limitations"><summary>Jak interpretować wynik</summary><p>Model przedstawia potencjalny spływ z NMT, a nie prognozę ilości wody. Siatka jest próbkowana co {terrain.sampleSpacingM} m, a otoczenie analizowane w buforze {terrain.bufferM} m. Wynik nie uwzględnia rowów, przepustów, upraw ani infiltracji gleby.</p></details>
+              <p className="terrain-note">Źródło: <a href={terrain.source.url} target="_blank" rel="noreferrer">{terrain.source.name}</a>; źródłowy NMT {terrain.source.nativeResolutionM} m, układ wysokości {terrain.elevationDatum}. Zasilany obszar poza buforem może być niepełny.</p>
+            </> : null}
+        </section>
+      </section>
+
+      <section className="drought-card" aria-live="polite" aria-label="Dane o podatności na suszę">
+        <div className="drought-card-heading"><div><span className="drought-kicker">IUNG-PIB · SUSZA{parcelBadge ? ` · ${parcelBadge}` : ""}</span><h2>Podatność gleby i ryzyko suszy</h2></div>
+          {droughtData?.category && <span className="drought-category">Kat. {droughtData.category.code}</span>}
+        </div>
+        {drought.status === "loading" ? <div className="drought-status"><span className="spinner" /> Pobieram podatność gleby IUNG…</div>
+          : drought.status === "error" ? <div className="drought-error" role="alert">{drought.message}</div>
+          : droughtData ? droughtData.status === "unavailable" || !droughtData.category ? <div className="drought-unavailable"><strong>Brak danych o podatności gleby dla tej lokalizacji.</strong>{droughtData.unavailableReason === "classification" ? <p>{droughtData.unclassifiedPercentage >= 99.9 ? "Cała powierzchnia działki jest nieklasyfikowana przez warstwę IUNG — np. może to być woda, zabudowa, las lub grunt organiczny. Nie przypisujemy jej kategorii podatności I–IV ani nie wyliczamy ryzyka suszy." : "Warstwa IUNG nie przypisała działce wystarczającej powierzchni do kategorii I–IV podatności gleby. Działka lub jej część może należeć do gleby organicznej, lasu, wody, zabudowy, nieużytków, terenów komunikacyjnych albo obszaru niesklasyfikowanego."}</p> : <p>Usługa IUNG-PIB nie zwróciła w tym momencie prawidłowej warstwy klasyfikacji. Spróbuj ponownie później.</p>}</div>
+          : <>
+            <div className="drought-layout"><div className="drought-left">
+              <div className="drought-metrics"><div><span className="drought-metric-label">Podatność gleby</span><span className={`drought-value drought-category-${droughtData.category.code}`}>{droughtData.category.susceptibility}</span></div><div><span className="drought-metric-label">Bieżące ryzyko</span><span className={`drought-value drought-risk-${droughtData.currentRisk.replaceAll(" ", "-")}`}>{droughtData.currentRisk}</span></div></div>
+              <div className="drought-breakdown"><div className="drought-breakdown-heading"><strong>Struktura działki</strong><span>udział kategorii I–IV</span></div>
+                <div className="drought-category-bar" aria-label="Udział kategorii podatności gleby na działce">{(["1", "2", "3", "4"] as const).map((code) => <span key={code} className={`drought-category-part drought-legend-${code}`} style={{ flexGrow: droughtData.categoryPercentages[code] }} title={`Kategoria ${code}: ${droughtData.categoryPercentages[code].toFixed(1)}%`} />)}{droughtData.unclassifiedPercentage > 0 && <span className="drought-category-part drought-unclassified-part" style={{ flexGrow: droughtData.unclassifiedPercentage }} title={`Nieklasyfikowane: ${droughtData.unclassifiedPercentage.toFixed(1)}%`} />}</div>
+                <div className="drought-legend"><span><i className="drought-legend-1"/><b>I</b> Bardzo podatna <strong>{droughtData.categoryPercentages["1"].toFixed(1)}%</strong></span><span><i className="drought-legend-2"/><b>II</b> Podatna <strong>{droughtData.categoryPercentages["2"].toFixed(1)}%</strong></span><span><i className="drought-legend-3"/><b>III</b> Średnio podatna <strong>{droughtData.categoryPercentages["3"].toFixed(1)}%</strong></span><span><i className="drought-legend-4"/><b>IV</b> Mało podatna <strong>{droughtData.categoryPercentages["4"].toFixed(1)}%</strong></span>{droughtData.unclassifiedPercentage > 0 && <span className="drought-unclassified-legend"><i className="drought-unclassified-part"/><b>—</b> Nieklasyfikowane <strong>{droughtData.unclassifiedPercentage.toFixed(1)}%</strong></span>}</div>
+              </div>
+              <div className="drought-interpretation-wrap"><span className="drought-insight-icon" aria-hidden="true">i</span><p className="drought-interpretation">{droughtData.interpretation}</p></div>
+            </div>
+            {droughtData.previewUrl && <figure className="drought-preview"><img src={droughtData.previewUrl} alt="Mały wycinek mapy podatności gleby IUNG dla granic działki"/><figcaption>Wycinek mapy IUNG dla działki</figcaption></figure>}
+            </div>
+            {droughtData.precipitationDeficitMm !== null && droughtData.precipitationDeficitMm > 0 && <p className="drought-deficit">Niedobór względem orientacyjnego progu: <strong>{droughtData.precipitationDeficitMm.toFixed(1)} mm</strong></p>}
+            <p className="drought-source">Warstwa IUNG 2024 · {droughtData.provider} · dane nie są bieżącym monitorowaniem suszy</p>
+          </> : null}
+      </section>
+    </>
+  );
+}
+
 function ParcelDetailedBlocks({
   summary,
   weather,
@@ -1419,6 +1560,9 @@ function ParcelDetailedBlocks({
   hydroData,
   satellite,
   satelliteData,
+  soilTexture,
+  terrainFlow,
+  drought,
   cropName,
   parcelBadge,
 }: {
@@ -1429,6 +1573,9 @@ function ParcelDetailedBlocks({
   hydroData: HydroResult | null;
   satellite: LoadState<SatelliteResult>;
   satelliteData: SatelliteResult | null;
+  soilTexture: LoadState<SoilTextureResult>;
+  terrainFlow: LoadState<TerrainFlowResult>;
+  drought: LoadState<DroughtResult>;
   cropName: string;
   parcelBadge?: string;
 }) {
@@ -1473,6 +1620,8 @@ function ParcelDetailedBlocks({
           </>
         )}
       </section>
+
+      <DetailedLandAnalysis soilTexture={soilTexture} terrainFlow={terrainFlow} drought={drought} parcelBadge={parcelBadge} />
 
       <section className="report-card report-block">
         <div className="report-section-heading">
