@@ -178,7 +178,11 @@ async function fetchWaterways(bounds: { minX: number; minY: number; maxX: number
   const query = `[out:json][timeout:12];way["waterway"~"^(river|stream|canal|ditch|drain)$"](${south},${west},${north},${east});out geom;`;
   const response = await fetch(OVERPASS_SERVICE, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Accept: "application/json",
+      "User-Agent": "Ziemowit/1.0 (+https://github.com/mateusz-kurowski/HackNation-2026-proj2)",
+    },
     body: new URLSearchParams({ data: query }),
     signal: AbortSignal.timeout(15_000),
     cache: "no-store",
