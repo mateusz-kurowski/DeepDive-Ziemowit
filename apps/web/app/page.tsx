@@ -182,6 +182,7 @@ type DroughtResult = {
   } | null;
   previewUrl: string | null;
   categoryPercentages: Record<"1" | "2" | "3" | "4", number>;
+  unclassifiedPercentage: number;
   unavailableReason: "classification" | "service" | null;
   precipitation30DaysMm: number | null;
   precipitationDeficitMm: number | null;
@@ -792,30 +793,63 @@ export default function Home() {
                   </div>
                 ) : (
                   <>
-                    <div className="drought-metrics">
-                      <div>
-                        <span className={`drought-value drought-category-${drought.category.code}`}>{drought.category.susceptibility}</span>
-                        <small>Podatność gleby</small>
+                    <div className="drought-layout">
+                      <div className="drought-left">
+                        <div className="drought-metrics">
+                          <div>
+                            <span className="drought-metric-label">Podatność gleby</span>
+                            <span className={`drought-value drought-category-${drought.category.code}`}>{drought.category.susceptibility}</span>
+                          </div>
+                          <div>
+                            <span className="drought-metric-label">Bieżące ryzyko</span>
+                            <span className={`drought-value drought-risk-${drought.currentRisk.replaceAll(" ", "-")}`}>{drought.currentRisk}</span>
+                          </div>
+                        </div>
+                        <div className="drought-breakdown">
+                          <div className="drought-breakdown-heading">
+                            <strong>Struktura działki</strong>
+                            <span>udział kategorii I–IV</span>
+                          </div>
+                          <div className="drought-category-bar" aria-label="Udział kategorii podatności gleby na działce">
+                            {(["1", "2", "3", "4"] as const).map((category) => (
+                              <span
+                                key={category}
+                                className={`drought-category-part drought-legend-${category}`}
+                                style={{ flexGrow: drought.categoryPercentages[category] }}
+                                title={`Kategoria ${category}: ${drought.categoryPercentages[category].toFixed(1)}%`}
+                              />
+                            ))}
+                            {drought.unclassifiedPercentage > 0 && (
+                              <span
+                                className="drought-category-part drought-unclassified-part"
+                                style={{ flexGrow: drought.unclassifiedPercentage }}
+                                title={`Nieklasyfikowane: ${drought.unclassifiedPercentage.toFixed(1)}%`}
+                              />
+                            )}
+                          </div>
+                          <div className="drought-legend" aria-label="Legenda kategorii podatności gleby IUNG">
+                            <span><i className="drought-legend-1" /><b>I</b> Bardzo podatna <strong>{drought.categoryPercentages["1"].toFixed(1)}%</strong></span>
+                            <span><i className="drought-legend-2" /><b>II</b> Podatna <strong>{drought.categoryPercentages["2"].toFixed(1)}%</strong></span>
+                            <span><i className="drought-legend-3" /><b>III</b> Średnio podatna <strong>{drought.categoryPercentages["3"].toFixed(1)}%</strong></span>
+                            <span><i className="drought-legend-4" /><b>IV</b> Mało podatna <strong>{drought.categoryPercentages["4"].toFixed(1)}%</strong></span>
+                            {drought.unclassifiedPercentage > 0 && (
+                              <span className="drought-unclassified-legend"><i className="drought-unclassified-part" /><b>—</b> Nieklasyfikowane <strong>{drought.unclassifiedPercentage.toFixed(1)}%</strong></span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="drought-interpretation-wrap">
+                          <span className="drought-insight-icon" aria-hidden="true">i</span>
+                          <p className="drought-interpretation">{drought.interpretation}</p>
+                        </div>
                       </div>
-                      <div>
-                        <span className={`drought-value drought-risk-${drought.currentRisk.replaceAll(" ", "-")}`}>{drought.currentRisk}</span>
-                        <small>Wskaźnik bieżącego ryzyka</small>
-                      </div>
+                      {drought.previewUrl && (
+                        <figure className="drought-preview">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={drought.previewUrl} alt="Mały wycinek mapy podatności gleby IUNG dla granic działki" />
+                          <figcaption>Wycinek mapy IUNG dla działki</figcaption>
+                        </figure>
+                      )}
                     </div>
-                    {drought.previewUrl && (
-                      <figure className="drought-preview">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={drought.previewUrl} alt="Mały wycinek mapy podatności gleby IUNG dla granic działki" />
-                        <figcaption>Wycinek mapy IUNG dla działki</figcaption>
-                      </figure>
-                    )}
-                    <div className="drought-legend" aria-label="Legenda kategorii podatności gleby IUNG">
-                      <span><i className="drought-legend-1" />I — bardzo podatna <strong>{drought.categoryPercentages["1"].toFixed(1)}%</strong></span>
-                      <span><i className="drought-legend-2" />II — podatna <strong>{drought.categoryPercentages["2"].toFixed(1)}%</strong></span>
-                      <span><i className="drought-legend-3" />III — średnio podatna <strong>{drought.categoryPercentages["3"].toFixed(1)}%</strong></span>
-                      <span><i className="drought-legend-4" />IV — mało podatna <strong>{drought.categoryPercentages["4"].toFixed(1)}%</strong></span>
-                    </div>
-                    <p className="drought-interpretation">{drought.interpretation}</p>
                     {drought.precipitationDeficitMm !== null && drought.precipitationDeficitMm > 0 && (
                       <p className="drought-deficit">Niedobór względem orientacyjnego progu: <strong>{drought.precipitationDeficitMm.toFixed(1)} mm</strong></p>
                     )}
