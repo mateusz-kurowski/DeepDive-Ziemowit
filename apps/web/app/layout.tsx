@@ -6,7 +6,7 @@ import AccessibilityMenu from "./components/AccessibilityMenu";
 
 export const metadata: Metadata = {
   title: "Ziemowit – grunt to nawodnienie",
-  description: "Ziemowit – asystent wodny rolnika. Sprawdź opady, wilgotność gleby i zalecenia dla swojej działki.",
+  description: "Ziemowit – twój asystent wodny. Sprawdź opady, wilgotność gleby i zalecenia dla swojej działki.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

@@ -14,10 +14,6 @@ function LimitToPoland() {
     const updateMinZoom = () => {
       const zoom = map.getBoundsZoom(POLAND_BOUNDS, false);
       map.setMinZoom(zoom);
-      map.fitBounds(POLAND_BOUNDS, {
-        animate: false,
-        padding: [8, 8],
-      });
     };
     updateMinZoom();
     map.on("resize", updateMinZoom);
