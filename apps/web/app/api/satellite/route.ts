@@ -71,12 +71,36 @@ function isoDate(date: Date): string {
 function paddedBbox(bbox: [number, number, number, number]): [number, number, number, number] {
   const longitudePadding = (bbox[2] - bbox[0]) * 0.12;
   const latitudePadding = (bbox[3] - bbox[1]) * 0.12;
-  return [
+  const padded: [number, number, number, number] = [
     bbox[0] - longitudePadding,
     bbox[1] - latitudePadding,
     bbox[2] + longitudePadding,
     bbox[3] + latitudePadding,
   ];
+
+  const west = padded[0];
+  const south = padded[1];
+  const east = padded[2];
+  const north = padded[3];
+  const centerLatitude = (south + north) / 2;
+  const widthMeters = (east - west) * 111320 * Math.cos(centerLatitude * Math.PI / 180);
+  const heightMeters = (north - south) * 111320;
+  const targetRatio = 16 / 11;
+  let [frameWest, frameSouth, frameEast, frameNorth] = padded;
+
+  if (widthMeters / heightMeters < targetRatio) {
+    const requiredWidthMeters = heightMeters * targetRatio;
+    const requiredWidthDegrees = requiredWidthMeters / (111320 * Math.cos(centerLatitude * Math.PI / 180));
+    frameWest = (west + east - requiredWidthDegrees) / 2;
+    frameEast = (west + east + requiredWidthDegrees) / 2;
+  } else if (widthMeters / heightMeters > targetRatio) {
+    const requiredHeightMeters = widthMeters / targetRatio;
+    const requiredHeightDegrees = requiredHeightMeters / 111320;
+    frameSouth = (south + north - requiredHeightDegrees) / 2;
+    frameNorth = (south + north + requiredHeightDegrees) / 2;
+  }
+
+  return [frameWest, frameSouth, frameEast, frameNorth];
 }
 
 function pointInRing(x: number, y: number, ring: number[][]): boolean {
@@ -310,7 +334,7 @@ async function createParcelImage(
     }).resize({
       width: 640,
       height: 440,
-      fit: "inside",
+      fit: "fill",
       kernel: "lanczos3",
       withoutEnlargement: false,
     }).png().toBuffer({ resolveWithObject: true });
@@ -377,7 +401,7 @@ export async function POST(request: Request) {
   const geometry = body.geometry && typeof body.geometry === "object" ? body.geometry : null;
   const weatherAvailable = body.weatherAvailable === true;
   const bbox = geometryBbox(geometry, lat, lng);
-  const cacheKey = `v4:${lng.toFixed(4)}:${lat.toFixed(4)}:${crop}:${JSON.stringify(geometry)}:${isoDate(new Date())}`;
+  const cacheKey = `v5:${lng.toFixed(4)}:${lat.toFixed(4)}:${crop}:${JSON.stringify(geometry)}:${isoDate(new Date())}`;
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return NextResponse.json(cached.value);
 
