@@ -9,13 +9,17 @@ type Polygon = Ring[];
 type Geometry = { type: "Polygon"; coordinates: Polygon } | { type: "MultiPolygon"; coordinates: Polygon[] };
 
 const HEIGHT_SERVICE = "https://services.gugik.gov.pl/nmt/";
-const OVERPASS_SERVICE = "https://overpass-api.de/api/interpreter";
+const OVERPASS_SERVICES = [
+  { name: "Overpass · Private.coffee", url: "https://overpass.private.coffee/api/interpreter" },
+  { name: "Overpass · FOSSGIS", url: "https://overpass-api.de/api/interpreter" },
+];
+const OVERPASS_REQUEST_TIMEOUT_MS = 9_000;
 const BUFFER_M = 50;
 const WATERWAY_SEARCH_M = 1000;
 const WATERWAY_MATCH_M = 150;
 const TARGET_MAX_SAMPLES = 6000;
 const MIN_SAMPLE_SPACING_M = 2;
-const GRID_CACHE_VERSION = "grid-6000-2m-waterway-v1";
+const GRID_CACHE_VERSION = "grid-6000-2m-waterway-v2";
 const LIST_BATCH_SIZE = 200;
 const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 const cache = new Map<string, { expiresAt: number; value: Record<string, unknown> }>();
@@ -164,6 +168,40 @@ function distanceToNetwork(point: Position, waterways: Waterway[]): { distanceM:
   return nearest;
 }
 
+async function fetchOverpass(query: string): Promise<unknown> {
+  const failures: string[] = [];
+  for (const service of OVERPASS_SERVICES) {
+    try {
+      const response = await fetch(service.url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+          Accept: "application/json",
+          "User-Agent": "Ziemowit/1.0 (+https://github.com/mateusz-kurowski/HackNation-2026-proj2)",
+        },
+        body: new URLSearchParams({ data: query }),
+        signal: AbortSignal.timeout(OVERPASS_REQUEST_TIMEOUT_MS),
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        failures.push(`${service.name}: HTTP ${response.status}`);
+        if (response.status === 406 || response.status === 429 || response.status >= 500) continue;
+        throw new Error(`OpenStreetMap zwrócił HTTP ${response.status}.`);
+      }
+      const payload = await response.json() as { remark?: string };
+      if (payload.remark) {
+        failures.push(`${service.name}: ${payload.remark.slice(0, 160)}`);
+        continue;
+      }
+      return payload;
+    } catch (error) {
+      const isTimeout = error instanceof Error && (error.name === "TimeoutError" || /timeout|timed out|aborted/i.test(error.message));
+      failures.push(`${service.name}: ${isTimeout ? "timeout" : error instanceof Error ? error.message : "błąd połączenia"}`);
+    }
+  }
+  throw new Error(`Nie udało się pobrać sieci wodnej z żadnej usługi Overpass (${failures.join("; ")}).`);
+}
+
 async function fetchWaterways(bounds: { minX: number; minY: number; maxX: number; maxY: number }): Promise<Waterway[]> {
   const corners: Position[] = [
     [bounds.minX - WATERWAY_SEARCH_M, bounds.minY - WATERWAY_SEARCH_M],
@@ -175,20 +213,8 @@ async function fetchWaterways(bounds: { minX: number; minY: number; maxX: number
   const north = Math.max(...corners.map(([, lat]) => lat));
   const west = Math.min(...corners.map(([lng]) => lng));
   const east = Math.max(...corners.map(([lng]) => lng));
-  const query = `[out:json][timeout:12];way["waterway"~"^(river|stream|canal|ditch|drain)$"](${south},${west},${north},${east});out geom;`;
-  const response = await fetch(OVERPASS_SERVICE, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-      Accept: "application/json",
-      "User-Agent": "Ziemowit/1.0 (+https://github.com/mateusz-kurowski/HackNation-2026-proj2)",
-    },
-    body: new URLSearchParams({ data: query }),
-    signal: AbortSignal.timeout(15_000),
-    cache: "no-store",
-  });
-  if (!response.ok) throw new Error(`OpenStreetMap zwrócił HTTP ${response.status}.`);
-  const payload = await response.json() as { elements?: Array<{ type?: string; id?: number; tags?: Record<string, string>; geometry?: Array<{ lon?: number; lat?: number }> }> };
+  const query = `[out:json][timeout:8];way["waterway"~"^(river|stream|canal|ditch|drain)$"](${south},${west},${north},${east});out tags geom;`;
+  const payload = await fetchOverpass(query) as { elements?: Array<{ type?: string; id?: number; tags?: Record<string, string>; geometry?: Array<{ lon?: number; lat?: number }> }> };
   return (payload.elements ?? []).flatMap((element) => {
     if (element.type !== "way" || !Number.isFinite(element.id) || !Array.isArray(element.geometry)) return [];
     const coordinates = element.geometry.flatMap(({ lon, lat }) => typeof lon === "number" && Number.isFinite(lon) && typeof lat === "number" && Number.isFinite(lat)
