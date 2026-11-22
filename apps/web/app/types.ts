@@ -88,6 +88,27 @@ export type HydroResult = {
   limitations: string[];
 };
 
+export type ImgwWarning = {
+  id: string;
+  type: "meteorological" | "hydrological";
+  event: string;
+  degree: string | null;
+  probabilityPercent: number | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  publishedAt: string | null;
+  area: string;
+  description: string;
+};
+
+export type ImgwWarningsResult = {
+  fetchedAt: string;
+  meteorological: { status: "available" | "unavailable"; warnings: ImgwWarning[]; error: string | null };
+  hydrological: { status: "available" | "unavailable"; warnings: ImgwWarning[]; error: string | null };
+  location: { county: string; voivodeship: string };
+  source: { name: string; url: string };
+};
+
 export type SatelliteResult = {
   status: "available" | "partial" | "unavailable";
   provider: "Earth Search";

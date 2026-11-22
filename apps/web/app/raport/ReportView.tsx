@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
-import type { HydroResult, HydroStation, ParcelResult, SatelliteResult, WeatherResult } from "../types";
+import type { HydroResult, HydroStation, ImgwWarning, ImgwWarningsResult, ParcelResult, SatelliteResult, WeatherResult } from "../types";
 import BrandLogo from "../components/BrandLogo";
 import SatelliteImage from "../components/SatelliteImage";
 import { buildAdvice, timingLabel } from "./advice";
@@ -73,6 +73,37 @@ const soilLabel: Record<HydroResult["soil"]["status"], string> = {
   unknown: "Brak danych",
 };
 
+function warningDegreeLabel(degree: string | null) {
+  if (degree === "-1") return "informacja";
+  return degree ? `stopień ${degree}` : "ostrzeżenie";
+}
+
+function warningDate(value: string | null) {
+  return value ? value.slice(0, 16).replace("T", " ") : "brak daty";
+}
+
+function WarningList({ title, warnings }: { title: string; warnings: ImgwWarning[] }) {
+  return (
+    <div className="imgw-warning-group">
+      <h3 className="report-subtitle">{title}</h3>
+      {warnings.length ? (
+        <ul className="imgw-warning-list">
+          {warnings.map((warning) => (
+            <li key={warning.id} className="imgw-warning-item">
+              <div className="imgw-warning-heading">
+                <strong>{warning.event}</strong>
+                <span>{warningDegreeLabel(warning.degree)}</span>
+              </div>
+              <p>{warning.description}</p>
+              <small>Obszar: {warning.area} · do {warningDate(warning.endsAt)}{warning.probabilityPercent !== null ? ` · prawdopodobieństwo ${warning.probabilityPercent}%` : ""}</small>
+            </li>
+          ))}
+        </ul>
+      ) : <p className="report-note">Brak obecnych ostrzeżeń w sprawdzonym obszarze.</p>}
+    </div>
+  );
+}
+
 const cropLabels: Record<string, string> = {
   zboza: "zboża",
   rzepak: "rzepak",
@@ -92,6 +123,7 @@ export default function ReportView({ parcelId, point, crop }: {
   const [parcel, setParcel] = useState<LoadState<ParcelResult>>({ status: "loading" });
   const [weather, setWeather] = useState<LoadState<WeatherResult>>({ status: "loading" });
   const [hydro, setHydro] = useState<LoadState<HydroResult>>({ status: "loading" });
+  const [imgwWarnings, setImgwWarnings] = useState<LoadState<ImgwWarningsResult>>({ status: "loading" });
   const [satellite, setSatellite] = useState<LoadState<SatelliteResult>>({ status: "loading" });
   const [generatedAt, setGeneratedAt] = useState<Date | null>(null);
   const [mode, setMode] = useState<ReportMode>("simple");
@@ -109,11 +141,13 @@ export default function ReportView({ parcelId, point, crop }: {
 
   useEffect(() => {
     if (!parcelId) {
+      setImgwWarnings({ status: "error", message: "Brak identyfikatora działki do sprawdzenia ostrzeżeń IMGW." });
       setParcel({ status: "error", message: "Brak identyfikatora działki w adresie raportu." });
       setSatellite({ status: "error", message: "Brak identyfikatora działki." });
       return;
     }
     setSatellite({ status: "loading" });
+    setImgwWarnings({ status: "loading" });
     const controller = new AbortController();
 
     (async () => {
@@ -138,11 +172,20 @@ export default function ReportView({ parcelId, point, crop }: {
       const lat = point?.lat ?? selected.lat;
       const lng = point?.lng ?? selected.lng;
       if (lat == null || lng == null) {
+        setImgwWarnings({ status: "error", message: "Brak współrzędnych działki." });
         setWeather({ status: "error", message: "Brak współrzędnych działki." });
         setHydro({ status: "error", message: "Brak współrzędnych działki." });
         setSatellite({ status: "error", message: "Brak współrzędnych działki." });
         return;
       }
+
+      void postJson<ImgwWarningsResult>("/api/imgw-warnings", {
+        parcelId: selected.id,
+        county: selected.county,
+        voivodeship: selected.voivodeship,
+      }, controller.signal, "Nie udało się sprawdzić aktualnych ostrzeżeń IMGW.")
+        .then((data) => setImgwWarnings({ status: "ready", data }))
+        .catch((reason) => { if (!controller.signal.aborted) setImgwWarnings({ status: "error", message: errorMessage(reason, "Nie udało się sprawdzić aktualnych ostrzeżeń IMGW.") }); });
 
       void postJson<HydroResult>("/api/hydro", { latitude: lat, longitude: lng }, controller.signal)
         .then((data) => setHydro({ status: "ready", data }))
@@ -279,6 +322,40 @@ export default function ReportView({ parcelId, point, crop }: {
         <div className="report-card report-map-card">
           <ParcelMap parcel={parcelData} className="report-map" />
         </div>
+      </section>
+
+      <section className="report-card report-block imgw-warning-card" aria-live="polite" aria-label="Ostrzeżenia IMGW">
+        <div className="report-section-heading">
+          <div>
+            <span className="weather-kicker">IMGW-PIB · AKTUALNE KOMUNIKATY</span>
+            <h2 className="report-title">Ostrzeżenia dla regionu działki</h2>
+          </div>
+          {imgwWarnings.status === "ready" && (
+            <a className="weather-source" href={imgwWarnings.data.source.url} target="_blank" rel="noreferrer">Źródło IMGW</a>
+          )}
+        </div>
+        {imgwWarnings.status === "loading" ? (
+          <div className="status-message"><span className="spinner" /> Sprawdzam aktywne ostrzeżenia IMGW…</div>
+        ) : imgwWarnings.status === "error" ? (
+          <div className="weather-error" role="status">Nie udało się sprawdzić ostrzeżeń. {imgwWarnings.message}</div>
+        ) : (
+          <>
+            {imgwWarnings.data.meteorological.status === "available"
+              && imgwWarnings.data.hydrological.status === "available"
+              && imgwWarnings.data.meteorological.warnings.length === 0
+              && imgwWarnings.data.hydrological.warnings.length === 0 && (
+                <p className="imgw-no-warnings">Brak obecnych ostrzeżeń IMGW dla sprawdzanego powiatu i województwa.</p>
+              )}
+            {imgwWarnings.data.meteorological.status === "available" ? (
+              <WarningList title={`Ostrzeżenia meteorologiczne · ${imgwWarnings.data.location.county || "powiat działki"}`} warnings={imgwWarnings.data.meteorological.warnings} />
+            ) : <p className="weather-error" role="status">{imgwWarnings.data.meteorological.error}</p>}
+            {imgwWarnings.data.hydrological.status === "available" ? (
+              <WarningList title="Ostrzeżenia hydrologiczne · województwo działki" warnings={imgwWarnings.data.hydrological.warnings} />
+            ) : <p className="weather-error" role="status">{imgwWarnings.data.hydrological.error}</p>}
+            <p className="imgw-warning-note">Ostrzeżenia meteorologiczne dopasowano do kodu TERYT powiatu. Ostrzeżenia hydrologiczne pokazujemy dla obszarów w województwie; opis IMGW wskazuje zlewnię i nie potwierdza, że ostrzeżenie obejmuje konkretną działkę.</p>
+            <p className="imgw-warning-updated">Ostatnie sprawdzenie: {new Date(imgwWarnings.data.fetchedAt).toLocaleString("pl-PL")}</p>
+          </>
+        )}
       </section>
 
       {summary && (
