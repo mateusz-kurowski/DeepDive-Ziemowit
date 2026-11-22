@@ -117,12 +117,108 @@ function getHydrologicalWarnings(raw: RawHydrologicalWarning[], voivodeship: str
   });
 }
 
+type ParcelWarningInput = {
+  parcelId: string;
+  county: string;
+  voivodeship: string;
+};
+
+function dedupeWarnings(warnings: ImgwWarning[]): ImgwWarning[] {
+  const seen = new Map<string, ImgwWarning>();
+  for (const warning of warnings) {
+    const existing = seen.get(warning.id);
+    if (!existing) {
+      seen.set(warning.id, warning);
+    } else if (warning.area && !existing.area.includes(warning.area)) {
+      seen.set(warning.id, { ...existing, area: `${existing.area}; ${warning.area}` });
+    }
+  }
+  return Array.from(seen.values());
+}
+
 export async function POST(request: NextRequest) {
-  let body: { parcelId?: unknown; county?: unknown; voivodeship?: unknown };
+  let body: {
+    parcelId?: unknown;
+    county?: unknown;
+    voivodeship?: unknown;
+    parcels?: unknown;
+    parcelIds?: unknown;
+  };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Niepoprawne dane działki." }, { status: 400 });
+  }
+
+  const batchItems: ParcelWarningInput[] = Array.isArray(body.parcels)
+    ? body.parcels
+        .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+        .map((item) => ({
+          parcelId: typeof item.parcelId === "string" ? item.parcelId : typeof item.id === "string" ? item.id : "",
+          county: typeof item.county === "string" ? item.county : "",
+          voivodeship: typeof item.voivodeship === "string" ? item.voivodeship : "",
+        }))
+    : Array.isArray(body.parcelIds)
+      ? body.parcelIds
+          .filter((id): id is string => typeof id === "string")
+          .map((parcelId) => ({ parcelId, county: "", voivodeship: "" }))
+      : [];
+
+  if (batchItems.length > 0) {
+    const validTargets = batchItems
+      .map((item) => {
+        const teryt = /^(\d{4,6})/.exec(item.parcelId)?.[1] ?? "";
+        return teryt.length >= 4
+          ? { ...item, countyTeryt: teryt.slice(0, 4) }
+          : null;
+      })
+      .filter((item): item is ParcelWarningInput & { countyTeryt: string } => item !== null);
+
+    if (validTargets.length === 0) {
+      return NextResponse.json({ error: "Nie można ustalić powiatu działek do sprawdzenia ostrzeżeń IMGW." }, { status: 400 });
+    }
+
+    const countyTeryts = Array.from(new Set(validTargets.map((item) => item.countyTeryt))).sort();
+    const voivodeships = Array.from(new Set(validTargets.map((item) => item.voivodeship).filter(Boolean)));
+    const counties = Array.from(new Set(validTargets.map((item) => item.county).filter(Boolean)));
+    const cacheKey = `batch:${countyTeryts.join(",")}:${voivodeships.map(normalize).sort().join(",")}`;
+    const cached = cache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) return NextResponse.json(cached.value);
+
+    const [meteorologicalResult, hydrologicalResult] = await Promise.allSettled([
+      fetchWarnings<RawMeteorologicalWarning>("https://danepubliczne.imgw.pl/api/data/warningsmeteo"),
+      fetchWarnings<RawHydrologicalWarning>("https://danepubliczne.imgw.pl/api/data/warningshydro"),
+    ]);
+    const now = warsawNow();
+
+    const meteoWarnings = meteorologicalResult.status === "fulfilled"
+      ? dedupeWarnings(countyTeryts.flatMap((countyTeryt) => getMeteorologicalWarnings(meteorologicalResult.value, countyTeryt, now)))
+      : [];
+    const hydroWarnings = hydrologicalResult.status === "fulfilled" && voivodeships.length > 0
+      ? dedupeWarnings(voivodeships.flatMap((voivodeship) => getHydrologicalWarnings(hydrologicalResult.value, voivodeship, now)))
+      : [];
+
+    const result: ImgwWarningsResult = {
+      fetchedAt: new Date().toISOString(),
+      meteorological: meteorologicalResult.status === "fulfilled"
+        ? { status: "available", warnings: meteoWarnings, error: null }
+        : { status: "unavailable", warnings: [], error: "Nie udało się pobrać ostrzeżeń meteorologicznych IMGW." },
+      hydrological: hydrologicalResult.status === "fulfilled" && voivodeships.length > 0
+        ? { status: "available", warnings: hydroWarnings, error: null }
+        : hydrologicalResult.status === "rejected"
+          ? { status: "unavailable", warnings: [], error: "Nie udało się pobrać ostrzeżeń hydrologicznych IMGW." }
+          : { status: "unavailable", warnings: [], error: "Nie udało się ustalić województwa działek." },
+      location: {
+        county: counties.length > 0 ? counties.join(", ") : "powiaty wybranych działek",
+        voivodeship: voivodeships.join(", "),
+      },
+      source: SOURCE,
+    };
+
+    if (meteorologicalResult.status === "fulfilled" || hydrologicalResult.status === "fulfilled") {
+      cache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL_MS, value: result });
+    }
+    return NextResponse.json(result);
   }
 
   const parcelId = typeof body.parcelId === "string" ? body.parcelId : "";

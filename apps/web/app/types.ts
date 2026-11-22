@@ -159,3 +159,54 @@ export type SatelliteResult = {
   interpretation: string;
   limitations: string[];
 };
+
+export type SoilTextureResult = {
+  status: "available" | "partial" | "unresolved-zero";
+  depth: string;
+  statistic: string;
+  units: string;
+  fractions: Record<"sand" | "silt" | "clay", { label: string; valueGkg: number | null; flag: string }>;
+  samplePoint: { lat: number; lng: number };
+  source: { name: string; resolutionM: number; url: string };
+};
+
+export type TerrainFlowResult = {
+  status: "available" | "partial";
+  sampleSpacingM: number;
+  bufferM: number;
+  elevationDatum: string;
+  validSampleCount: number;
+  source: { name: string; url: string; nativeResolutionM: number };
+  slope: { meanDeg: number | null; medianDeg: number | null; p90Deg: number | null; maxDeg: number | null };
+  flow: {
+    outflowExits: Array<{ direction: string; estimatedContributingAreaM2: number }>;
+    outflowPoints: Array<{ lat: number; lng: number; direction: string; estimatedContributingAreaM2: number }>;
+    inflowExits: Array<{ direction: string; estimatedContributingAreaM2: number }>;
+    concentrationZones: Array<{ lat: number; lng: number; estimatedContributingAreaM2: number }>;
+    depressions: Array<{ lat: number; lng: number; areaM2: number; maxFillDepthM: number }>;
+  };
+  limitations: string[];
+};
+
+export type DroughtResult = {
+  status: "available" | "unavailable";
+  provider: "IUNG-PIB";
+  source: "Susza:katgl_landuse2024";
+  layerDate: "2024";
+  category: {
+    code: number;
+    name: string;
+    susceptibility: "bardzo wysoka" | "wysoka" | "umiarkowana" | "niska" | "nieklasyfikowana";
+  } | null;
+  previewUrl: string | null;
+  categoryPercentages: Record<"1" | "2" | "3" | "4", number>;
+  unclassifiedPercentage: number;
+  unavailableReason: "classification" | "service" | null;
+  crop: string;
+  precipitation30DaysMm: number | null;
+  cropRainfallMinimumMm30Days: number;
+  precipitationDeficitMm: number | null;
+  currentRisk: "niski" | "umiarkowany" | "wysoki" | "bardzo wysoki" | "brak danych";
+  interpretation: string;
+  limitations: string[];
+};
