@@ -186,7 +186,7 @@ Data pobrania każdej odpowiedzi jest chwilą wywołania (pole `fetchedAt` tam, 
 
 ---
 
-## Biblioteki, usługi i sztuczna inteligencja
+## Biblioteki, usługi, narzędzia i sztuczna inteligencja
 
 ### Biblioteki aplikacji
 
@@ -207,17 +207,19 @@ Data pobrania każdej odpowiedzi jest chwilą wywołania (pole `fetchedAt` tam, 
 
 Wymienione w tabeli źródeł. Prototyp nie używa kluczy API, chmury płatnej ani konta użytkownika.
 
+### Narzędzia rozwoju
+
+Przy pisaniu i poprawianiu kodu używane były modele językowe w edytorze. To narzędzie pracy nad prototypem, a nie część działającej aplikacji. Raport ich nie woła.
+
 ### Sztuczna inteligencja
 
-**Ziemowit nie wywołuje modelu generatywnego i nie ma własnego modelu uczenia maszynowego.** Werdykt i porady liczy jawny zestaw reguł, który można przeczytać w kodzie i w `docs/rekomendacje-weryfikacja.md`.
+**Działający Ziemowit nie wywołuje modelu językowego i nie ma własnego modelu uczenia maszynowego.** Werdykt i porady liczy jawny zestaw reguł, który można przeczytać w kodzie i w `docs/rekomendacje-weryfikacja.md`. Tekst raportu jest składany z pobranych liczb.
 
 Korzystamy z **cudzych produktów modelowych jako ze źródeł danych**, bez ich trenowania i bez zmiany wag:
 
 - wilgotność gleby i ET₀ z Open-Meteo (reanaliza i model pogody);
 - przepływ GloFAS (model hydrologiczny Copernicus / ECMWF, udostępniony przez Open-Meteo Flood);
 - uziarnienie z mapy SoilGrids (ISRIC).
-
-Tekst raportu jest składany z tych liczb. Nie jest dopisywany przez model językowy.
 
 ---
 
