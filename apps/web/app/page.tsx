@@ -1,13 +1,13 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { useEffect, useRef, useState } from "react";
-import type { FormEvent, ReactNode } from "react";
 import type { Geometry } from "geojson";
-import type { ParcelResult } from "./types";
-import type { MapFocus } from "./components/ParcelMap";
+import dynamic from "next/dynamic";
+import type { FormEvent, ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import BrandLogo from "./components/BrandLogo";
+import type { MapFocus } from "./components/ParcelMap";
 import SatelliteImage from "./components/SatelliteImage";
+import type { ParcelResult } from "./types";
 const ParcelMap = dynamic(() => import("./components/ParcelMap"), {
   ssr: false,
   loading: () => <div className="map-loading">Ładowanie mapy…</div>,
@@ -578,13 +578,13 @@ export default function Home() {
   }
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell${parcel ? " parcel-selected" : ""}`}>
       <header className="hero">
         <div>
           <div className="hero-brand">
             <BrandLogo className="hero-logo" />
             <div>
-              <p className="eyebrow">ASYSTENT WODNY ROLNIKA</p>
+              <p className="eyebrow">TWÓJ ASYSTENT WODNY</p>
               <h1 className="brand-name">Ziemowit</h1>
               <p className="brand-slogan">Grunt to <span>nawodnienie</span></p>
             </div>
@@ -918,8 +918,10 @@ export default function Home() {
           )}
         </div>
         <aside className="details-panel" aria-live="polite">
-          <div className="panel-icon" aria-hidden="true">▧</div>
-          <h2>Wybrana działka</h2>
+          <div className="panel-heading">
+            <div className="panel-icon" aria-hidden="true">▧</div>
+            <h2>Wybrana działka</h2>
+          </div>
           <form className="parcel-search" onSubmit={searchParcel}>
             <label htmlFor="parcel-identifier">Znajdź działkę po numerze</label>
             <div className="search-controls">
@@ -1014,7 +1016,7 @@ export default function Home() {
                   </li>
                   <li>
                     <GuideIcon><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" /><circle cx="12" cy="10" r="2.2" /></GuideIcon>
-                    <span>Kliknij działkę na mapie, wpisz TERYT lub wybierz scenariusz demo.</span>
+                    <span>Kliknij działkę na mapie, wpisz nr działki lub wybierz scenariusz demo.</span>
                   </li>
                   <li>
                     <GuideIcon><path d="M7 3.5h7.2L19 8.2V20a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 6 20V5A1.5 1.5 0 0 1 7.5 3.5z" /><path d="M14 3.5V8h4.5M8.5 13h7M8.5 17h4.5" /></GuideIcon>
@@ -1025,18 +1027,17 @@ export default function Home() {
               <div>
                 <h3>Co zawiera raport</h3>
                 <ul className="guide-badges">
-                  <li><i className="guide-dot" aria-hidden="true" />Bilans opadów i ET0</li>
-                  <li><i className="guide-dot guide-dot-soil" aria-hidden="true" />Wilgotność gleby (Sentinel-2)</li>
-                  <li><i className="guide-dot guide-dot-water" aria-hidden="true" />Stan wód i ryzyko (IMGW)</li>
+                  <li><i className="guide-dot" aria-hidden="true" />Bilans opadów i parowania</li>
+                  <li><i className="guide-dot guide-dot-soil" aria-hidden="true" />Wilgotność gleby</li>
+                  <li><i className="guide-dot guide-dot-water" aria-hidden="true" />Wodowskazy i przepływy</li>
                 </ul>
               </div>
               </section>
             </>
           )}
-          <div className="source-box"><span className="source-check">✓</span><p>Dane pobierane na bieżąco z usługi lokalizacji działek GUGiK (ULDK).</p></div>
         </aside>
       </section>
-      <footer><strong>Ziemowit</strong> · grunt to nawodnienie. Wynik lokalizacji ma charakter informacyjny. Granice na mapie pochodzą z ewidencji udostępnianej przez ULDK.</footer>
+      <footer><strong>Ziemowit</strong> · grunt to nawodnienie. Wynik lokalizacji ma charakter informacyjny.</footer>
     </main>
   );
 }

@@ -95,10 +95,16 @@ export default function AccessibilityMenu() {
         className="a11y-toggle"
         aria-expanded={open}
         aria-controls={panelId}
+        aria-label="Dostępność"
         onClick={() => setOpen((value) => !value)}
       >
-        <span className="a11y-toggle-icon" aria-hidden="true">Aa</span>
-        Dostępność
+        <svg className="a11y-toggle-icon" aria-hidden="true" viewBox="0 0 24 24">
+          <circle cx="12" cy="4.5" r="2.25" fill="currentColor" />
+          <path d="M12 8.25c-3.15 0-5.35 1.25-6.9 2.95" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path d="M12 8.25c3.15 0 5.35 1.25 6.9 2.95" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path d="M12 8.5v4.25M12 12.75l-4.1 7M12 12.75l4.1 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+        <span className="a11y-tooltip" role="tooltip">Dostępność</span>
       </button>
       {open && (
         <div className="a11y-backdrop" onClick={(event) => { if (event.target === event.currentTarget) close(); }}>
