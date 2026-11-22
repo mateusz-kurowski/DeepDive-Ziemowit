@@ -391,8 +391,20 @@ export default function Home() {
         cache: "no-store",
         signal: controller.signal,
       });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error ?? "Nie udało się obliczyć kierunku spływu.");
+      const responseText = await response.text();
+      let result: unknown;
+      try {
+        result = JSON.parse(responseText) as unknown;
+      } catch {
+        const contentType = response.headers.get("content-type") ?? "nieznany format";
+        throw new Error(`Serwer analizy terenu zwrócił nieoczekiwaną odpowiedź (HTTP ${response.status}, ${contentType}). Możliwy timeout lub błąd endpointu.`);
+      }
+      if (!response.ok) {
+        const serverError = result && typeof result === "object" && "error" in result && typeof result.error === "string"
+          ? result.error
+          : "Nie udało się obliczyć kierunku spływu.";
+        throw new Error(serverError);
+      }
       setTerrainFlow(result as TerrainFlowResult);
     } catch (reason) {
       if (!(reason instanceof Error && reason.name === "AbortError")) {

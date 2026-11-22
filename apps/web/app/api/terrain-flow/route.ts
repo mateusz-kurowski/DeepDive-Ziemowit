@@ -13,7 +13,8 @@ const OVERPASS_SERVICES = [
   { name: "Overpass · Private.coffee", url: "https://overpass.private.coffee/api/interpreter" },
   { name: "Overpass · FOSSGIS", url: "https://overpass-api.de/api/interpreter" },
 ];
-const OVERPASS_REQUEST_TIMEOUT_MS = 9_000;
+const OVERPASS_TOTAL_TIMEOUT_MS = 8_000;
+const OVERPASS_ATTEMPT_TIMEOUT_MS = 5_500;
 const BUFFER_M = 50;
 const WATERWAY_SEARCH_M = 1000;
 const WATERWAY_MATCH_M = 150;
@@ -170,7 +171,10 @@ function distanceToNetwork(point: Position, waterways: Waterway[]): { distanceM:
 
 async function fetchOverpass(query: string): Promise<unknown> {
   const failures: string[] = [];
+  const deadline = Date.now() + OVERPASS_TOTAL_TIMEOUT_MS;
   for (const service of OVERPASS_SERVICES) {
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) break;
     try {
       const response = await fetch(service.url, {
         method: "POST",
@@ -180,7 +184,7 @@ async function fetchOverpass(query: string): Promise<unknown> {
           "User-Agent": "Ziemowit/1.0 (+https://github.com/mateusz-kurowski/HackNation-2026-proj2)",
         },
         body: new URLSearchParams({ data: query }),
-        signal: AbortSignal.timeout(OVERPASS_REQUEST_TIMEOUT_MS),
+        signal: AbortSignal.timeout(Math.min(OVERPASS_ATTEMPT_TIMEOUT_MS, remainingMs)),
         cache: "no-store",
       });
       if (!response.ok) {
@@ -213,7 +217,7 @@ async function fetchWaterways(bounds: { minX: number; minY: number; maxX: number
   const north = Math.max(...corners.map(([, lat]) => lat));
   const west = Math.min(...corners.map(([lng]) => lng));
   const east = Math.max(...corners.map(([lng]) => lng));
-  const query = `[out:json][timeout:8];way["waterway"~"^(river|stream|canal|ditch|drain)$"](${south},${west},${north},${east});out tags geom;`;
+  const query = `[out:json][timeout:6];way["waterway"~"^(river|stream|canal|ditch|drain)$"](${south},${west},${north},${east});out tags geom;`;
   const payload = await fetchOverpass(query) as { elements?: Array<{ type?: string; id?: number; tags?: Record<string, string>; geometry?: Array<{ lon?: number; lat?: number }> }> };
   return (payload.elements ?? []).flatMap((element) => {
     if (element.type !== "way" || !Number.isFinite(element.id) || !Array.isArray(element.geometry)) return [];
