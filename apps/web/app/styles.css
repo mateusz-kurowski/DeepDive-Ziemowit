@@ -1016,8 +1016,8 @@ html[data-contrast="high"] .station-status { border-color: currentColor; }
     display: block;
   }
   .app-shell:not(.report-shell).parcel-selected .map-frame {
-    height: min(56vh, 500px);
-    min-height: 360px;
+    height: min(66vh, 620px);
+    min-height: 440px;
   }
   .app-shell:not(.report-shell).parcel-selected .details-panel {
     position: sticky;

@@ -73,6 +73,15 @@ async function fetchWarnings<T>(url: string): Promise<T[]> {
   });
   if (!response.ok) throw new Error(`IMGW zwrócił HTTP ${response.status}.`);
   const payload: unknown = await response.json();
+  if (
+    payload !== null
+    && typeof payload === "object"
+    && "message" in payload
+    && typeof payload.message === "string"
+    && /^brak ostrzeżeń/i.test(payload.message.trim())
+  ) {
+    return [];
+  }
   if (!Array.isArray(payload)) throw new Error("IMGW zwrócił nieoczekiwany format danych.");
   return payload as T[];
 }
